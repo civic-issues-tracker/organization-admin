@@ -107,15 +107,15 @@ const LoginForm: React.FC = () => {
 
         showToast("Login successful!", "success");
 
-        if (role === 'system_admin') {
-          navigate('/admin-dashboard');
-        } else if (isOrganizationAdminRole(role)) {
-          navigate('/organization-admin/dashboard');
+        if (isOrganizationAdminRole(role)) {
+          navigate('/dashboard');
         } else {
-          navigate('/report');
+          showToast("You don't have access to the organization admin portal.", 'error');
+          navigate('/login');
         }
       } else {
-        navigate('/report');
+        showToast('Login failed. Missing access token.', 'error');
+        navigate('/login');
       }
     
     } catch (error: unknown) {
