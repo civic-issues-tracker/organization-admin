@@ -98,10 +98,10 @@ const IssueDetailPage = () => {
             <div className="flex flex-col w-full p-4 md:p-12">
                 <div className="mb-6">
                     <Link
-                        to="/reports"
+                        to="/dashboard/queue"
                         className="inline-flex items-center gap-2 text-sm text-[#4A3728] hover:text-[#2f1f17]"
                     >
-                        <ArrowLeft size={16} /> Back to my reports
+                        <ArrowLeft size={16} /> Back to queue
                     </Link>
                 </div>
 

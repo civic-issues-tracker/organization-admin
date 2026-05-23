@@ -28,9 +28,9 @@ const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
   const statusDotClass = isVerified ? 'bg-[#2BD96B]' : 'bg-[#E05A5A]';
 
   const navItems = [
-    { label: 'My Queue', to: '/organization-admin/dashboard', icon: ClipboardList, badge: 2 },
-    { label: 'District Map', to: '/organization-admin/map', icon: Map },
-    { label: 'Resolved Tickets', to: '/organization-admin/resolved', icon: CheckSquare },
+    { label: 'My Queue', to: '/dashboard/queue', icon: ClipboardList, badge: 2 },
+    { label: 'District Map', to: '/dashboard/map', icon: Map },
+    { label: 'Resolved Tickets', to: '/dashboard/resolved', icon: CheckSquare },
   ];
 
   return (
@@ -91,7 +91,7 @@ const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
 
       <div className="space-y-1 px-4 pb-3 mt-auto">
         <NavLink
-          to="/organization-admin/notifications"
+          to="/dashboard/notifications"
           className={({ isActive }) =>
             `flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm transition ${
               isActive ? 'bg-white/10 text-white font-semibold' : 'text-[#EFDCC6] hover:bg-[#5D3F2C]/70'

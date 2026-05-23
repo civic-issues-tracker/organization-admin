@@ -134,7 +134,7 @@ const OrganizationAdminDashboardPage = () => {
 
 	const openDirections = () => {
 		if (!selected) return;
-		navigate('/organization-admin/dashboard/map');
+		navigate('/dashboard/map');
 		showToast(`Opened the Bole map for ${selected.issueNumber}.`, 'success');
 	};
 

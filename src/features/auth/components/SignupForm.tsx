@@ -127,9 +127,12 @@ const SignupForm: React.FC = () => {
         setTimeout(() => {
           login({ access: result.access, refresh: result.refresh, user: result.user });
           const role = result.user.role_name;
-          if (role === 'system_admin') navigate('/admin-dashboard');
-          else if (isOrganizationAdminRole(role)) navigate('/organization-admin/dashboard');
-          else navigate('/report');
+          if (isOrganizationAdminRole(role)) {
+            navigate('/dashboard');
+          } else {
+            triggerToast("You don't have access to the organization admin portal.", 'error');
+            navigate('/login');
+          }
         }, 1500);
       }
     } catch (error: unknown) {
