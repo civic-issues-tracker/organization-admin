@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { BarChart3, MapPin, MoreHorizontal, MoreVertical, Search, Send, TriangleAlert } from 'lucide-react';
 import { type OrganizationAdminTicket } from '../organizationAdminMockData';
@@ -34,6 +35,13 @@ const formatStatusLabel = (status?: OrganizationAdminTicket['status']) => {
 	return statusLabels[status] ?? 'Submitted';
 };
 
+const formatIssueTitle = (summary?: string, maxLength = 72) => {
+	const cleaned = summary?.replace(/\s+/g, ' ').trim();
+	if (!cleaned) return 'Reported issue';
+	const sentence = cleaned.split(/[.!?]/)[0]?.trim() ?? cleaned;
+	return sentence.length > maxLength ? `${sentence.slice(0, maxLength - 3)}...` : sentence;
+};
+
 const OrganizationAdminDashboardPage = () => {
 	const { user, showToast } = useAuth();
 	const navigate = useNavigate();
@@ -41,6 +49,10 @@ const OrganizationAdminDashboardPage = () => {
 	const [searchQuery, setSearchQuery] = useState('');
 	const { tickets, resolvedTickets, isLoading, error, updateStatus, updateInternalNotes, releaseIssue, escalateIssue } = useOrganizationAdminIssues(seed);
 	const [showResolved, setShowResolved] = useState(false);
+	// role_name from backend is 'organization_admin' — use full_name as the org name
+	const orgName = user?.full_name ||
+		((user as any)?.role_name === 'organization_admin' ? user?.full_name : null) ||
+		'Your Organization';
 
 	// All tickets (active + resolved) for selection lookup
 	const allTickets = useMemo(() => [...tickets, ...resolvedTickets], [tickets, resolvedTickets]);
@@ -48,11 +60,20 @@ const OrganizationAdminDashboardPage = () => {
 	// Dynamic weekly performance based on tickets processed/resolved
 	const weeklyPerformance = useMemo(() => {
 		const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-		const today = new Date();
+		
+		// Find the most recent ticket date to anchor the week, so the graph isn't flat if DB is old
+		let anchorDate = new Date();
+		if (allTickets.length > 0) {
+			const dates = allTickets.map(t => new Date(t.resolutionDate || t.createdAt || new Date()).getTime());
+			const validDates = dates.filter(d => !Number.isNaN(d));
+			if (validDates.length > 0) {
+				anchorDate = new Date(Math.max(...validDates));
+			}
+		}
 		
 		const last7Days = Array.from({ length: 7 }).map((_, i) => {
-			const d = new Date(today);
-			d.setDate(today.getDate() - (6 - i));
+			const d = new Date(anchorDate);
+			d.setDate(anchorDate.getDate() - (6 - i));
 			return {
 				day: days[d.getDay()],
 				dateString: d.toDateString(),
@@ -60,7 +81,7 @@ const OrganizationAdminDashboardPage = () => {
 			};
 		});
 
-		// Count any ticket updated or created in the last 7 days
+		// Count any ticket updated or created in those 7 days
 		allTickets.forEach((ticket) => {
 			// fallback to a recent date if none is found to avoid breaking
 			const d = new Date(ticket.resolutionDate || ticket.createdAt || new Date());
@@ -91,10 +112,11 @@ const OrganizationAdminDashboardPage = () => {
 		return (
 			t.issueNumber.toLowerCase().includes(q) ||
 			(t.location ?? '').toLowerCase().includes(q) ||
-			(t.title ?? '').toLowerCase().includes(q)
+			(t.summary ?? '').toLowerCase().includes(q)
 		);
 	});
-	const [selectedId, setSelectedId] = useState(() => tickets[0]?.id ?? '');
+	const location = useLocation();
+	const [selectedId, setSelectedId] = useState(() => location.state?.selectedId ?? tickets[0]?.id ?? '');
 	const [note, setNote] = useState('');
 
 	const selected = useMemo(
@@ -104,10 +126,17 @@ const OrganizationAdminDashboardPage = () => {
 	);
 	const statusLabel = formatStatusLabel(selected?.status);
 	const assignedAdminName = selected?.assignedAdminName?.trim() || '';
-	const currentAdminName = (user?.full_name || user?.email || '').trim();
+	// The backend returns assigned_admin_name as User.__str__() → "Full Name (email@example.com)"
+	// We must check if the current user's email OR full_name appears in that string.
+	const currentEmail = (user?.email || '').trim().toLowerCase();
+	const currentFullName = (user?.full_name || '').trim().toLowerCase();
+	const assignedLower = assignedAdminName.toLowerCase();
 	const isAssignedToCurrentUser =
-		assignedAdminName.length > 0 && currentAdminName.length > 0 &&
-		assignedAdminName.toLowerCase() === currentAdminName.toLowerCase();
+		assignedAdminName.length > 0 &&
+		(
+			(currentEmail.length > 0 && assignedLower.includes(currentEmail)) ||
+			(currentFullName.length > 0 && assignedLower.includes(currentFullName))
+		);
 	const isLockedByOther = assignedAdminName.length > 0 && !isAssignedToCurrentUser;
 
 	const setIssueStatus = async (status: OrganizationAdminTicket['status']) => {
@@ -116,8 +145,25 @@ const OrganizationAdminDashboardPage = () => {
 			showToast(`This issue is locked by ${assignedAdminName}.`, 'error');
 			return;
 		}
-		await updateStatus(selected.id, status);
-		showToast(`Status updated to ${formatStatusLabel(status)} for ${selected.issueNumber}.`, 'success');
+		const notePrompt = globalThis.prompt(`Add a note for status change to ${formatStatusLabel(status)} (optional):`);
+		if (notePrompt === null) return;
+		const note = notePrompt.trim();
+		if (!note) {
+			showToast('No note provided for this status change.', 'error');
+		}
+		try {
+			await updateStatus(selected.id, status);
+			if (note) {
+				const newNoteText = selected.internalNotes
+					? `${selected.internalNotes}\n\n[${new Date().toLocaleString()}] Status -> ${formatStatusLabel(status)}: ${note}`
+					: `[${new Date().toLocaleString()}] Status -> ${formatStatusLabel(status)}: ${note}`;
+				await updateInternalNotes(selected.id, newNoteText);
+			}
+			showToast(`Status updated to ${formatStatusLabel(status)} for ${selected.issueNumber}.`, 'success');
+		} catch (err) {
+			console.error('Failed to update status', err);
+			showToast('Failed to update status.', 'error');
+		}
 	};
 
 	const cycleStatus = async () => {
@@ -128,14 +174,31 @@ const OrganizationAdminDashboardPage = () => {
 				? 'submitted'
 				: selected.status;
 		const next = order[(order.indexOf(current) + 1) % order.length];
-		await updateStatus(selected.id, next);
-		showToast(`Status updated to ${formatStatusLabel(next)} for ${selected.issueNumber}.`, 'success');
+		const notePrompt = globalThis.prompt(`Add a note for status change to ${formatStatusLabel(next)} (optional):`);
+		if (notePrompt === null) return;
+		const note = notePrompt.trim();
+		if (!note) {
+			showToast('No note provided for this status change.', 'error');
+		}
+		try {
+			await updateStatus(selected.id, next);
+			if (note) {
+				const newNoteText = selected.internalNotes
+					? `${selected.internalNotes}\n\n[${new Date().toLocaleString()}] Status -> ${formatStatusLabel(next)}: ${note}`
+					: `[${new Date().toLocaleString()}] Status -> ${formatStatusLabel(next)}: ${note}`;
+				await updateInternalNotes(selected.id, newNoteText);
+			}
+			showToast(`Status updated to ${formatStatusLabel(next)} for ${selected.issueNumber}.`, 'success');
+		} catch (err) {
+			console.error('Failed to update status', err);
+			showToast('Failed to update status.', 'error');
+		}
 	};
 
 	const openDirections = () => {
 		if (!selected) return;
 		navigate('/dashboard/map');
-		showToast(`Opened the Bole map for ${selected.issueNumber}.`, 'success');
+		showToast(`Opened the service map for ${selected.issueNumber}.`, 'success');
 	};
 
 	const sendNote = async () => {
@@ -162,8 +225,19 @@ const OrganizationAdminDashboardPage = () => {
 			showToast('Only the assigned admin can release this issue.', 'error');
 			return;
 		}
-		const note = globalThis.prompt('Add a release note (optional):') ?? '';
+		const notePrompt = globalThis.prompt('Add a release note (optional):');
+		if (notePrompt === null) return;
+		const note = notePrompt.trim();
+		if (!note) {
+			showToast('No note provided for this status change.', 'error');
+		}
 		await releaseIssue(selected.id, note || undefined);
+		if (note) {
+			const newNoteText = selected.internalNotes
+				? `${selected.internalNotes}\n\n[${new Date().toLocaleString()}] Release: ${note}`
+				: `[${new Date().toLocaleString()}] Release: ${note}`;
+			await updateInternalNotes(selected.id, newNoteText);
+		}
 		showToast(`Issue ${selected.issueNumber} released.`, 'success');
 	};
 
@@ -179,6 +253,10 @@ const OrganizationAdminDashboardPage = () => {
 			return;
 		}
 		await escalateIssue(selected.id, reason.trim());
+		const newNoteText = selected.internalNotes
+			? `${selected.internalNotes}\n\n[${new Date().toLocaleString()}] Escalated: ${reason.trim()}`
+			: `[${new Date().toLocaleString()}] Escalated: ${reason.trim()}`;
+		await updateInternalNotes(selected.id, newNoteText);
 		showToast(`Issue ${selected.issueNumber} escalated to system admin.`, 'success');
 	};
 
@@ -206,10 +284,10 @@ const OrganizationAdminDashboardPage = () => {
 		<section>
 			<header className="mb-3 flex items-start justify-between gap-3">
 				<div>
-					<h2 className="text-[56px] font-black leading-[0.95] text-[#3E2B1F]">Issue Queue</h2>
-					<p className="text-sm text-[#857060]">Review, update, and dispatch assigned civic issues.</p>
+					<h2 className="text-[38px] font-black leading-[1.05] text-[#3E2B1F]">Issue Queue</h2>
+					<p className="text-xs text-[#857060]">Review, update, and dispatch assigned civic issues.</p>
 					<p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#B08E6A]">
-						Assigned to {user?.full_name || 'Organization Admin'} • {error ? 'Offline cache' : 'Live data'}
+						Assigned to {orgName} • {error ? 'Offline cache' : 'Live data'}
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
@@ -254,8 +332,16 @@ const OrganizationAdminDashboardPage = () => {
 
 					<div className="min-h-[72vh] rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3">
 						<div className="mb-2 flex items-center justify-between">
-							<h3 className="text-lg font-bold text-[#4A3628]">Assigned Tickets</h3>
-							<span className="rounded-full bg-[#E9DED2] px-2 py-0.5 text-xs text-[#705A47]">{filteredTickets.length} Total</span>
+							<h3 className="text-base font-bold text-[#4A3628]">Active Tickets</h3>
+							<div className="flex items-center gap-2">
+								<button 
+									onClick={() => navigate('/dashboard/assigned')}
+									className="text-[10px] font-bold uppercase text-[#A67C52] hover:text-[#8B643A] transition"
+								>
+									View My Assigned &rarr;
+								</button>
+								<span className="rounded-full bg-[#E9DED2] px-2 py-0.5 text-xs text-[#705A47]">{filteredTickets.length} Total</span>
+							</div>
 						</div>
 						<div className="space-y-2">
 							{filteredTickets.map((ticket) => (
@@ -275,7 +361,7 @@ const OrganizationAdminDashboardPage = () => {
 											{formatStatusLabel(ticket.status)}
 										</span>
 									</div>
-									<h4 className="text-sm font-semibold text-[#362518]">{ticket.title}</h4>
+									<h4 className="text-sm font-semibold text-[#362518]">{formatIssueTitle(ticket.summary, 58)}</h4>
 									<p className="mt-1 text-xs text-[#8A7767]">{ticket.location}</p>
 									<div className="mt-2 flex flex-wrap items-center gap-1 text-[10px]">
 										{ticket.assignedAdminName ? (
@@ -330,7 +416,7 @@ const OrganizationAdminDashboardPage = () => {
 														{formatStatusLabel(ticket.status)}
 													</span>
 												</div>
-												<h4 className="text-sm font-semibold text-[#362518]">{ticket.title}</h4>
+												<h4 className="text-sm font-semibold text-[#362518]">{formatIssueTitle(ticket.summary, 58)}</h4>
 												<p className="mt-1 text-xs text-[#8A7767]">{ticket.location}</p>
 												<div className="mt-2 flex flex-wrap items-center gap-1 text-[10px]">
 													{ticket.assignedAdminName ? (
@@ -417,16 +503,35 @@ const OrganizationAdminDashboardPage = () => {
 						)}
 					</div>
 
-					<h3 className="mb-2 text-[62px] font-extrabold leading-[0.92] text-[#2E2016]">{selected?.title ?? 'No issue selected'}</h3>
-					<p className="mb-3 rounded-xl border border-[#E7DBCF] bg-[#F2EBE2] p-3 text-sm text-[#624F3E]">"{selected?.summary ?? 'Select an issue to review details.'}"</p>
+					<div className="mb-4">
+						<div className="mb-2 flex items-center justify-between">
+							<span className="font-mono text-sm font-bold text-[#6B4C33]">{selected?.issueNumber}</span>
+							<span className="rounded-full bg-[#E5D5C5] px-2 py-0.5 text-xs font-semibold text-[#5A4737]">{selected?.category || 'General'}</span>
+						</div>
+						{/* Title: first sentence only (max 80 chars) — distinct from the full detail below */}
+						<h3 className="mb-2 text-base font-bold leading-snug text-[#2E2016]">
+							{selected?.summary
+								? (() => {
+										const firstSentence = selected.summary.split(/[.!?]/)[0]?.trim() ?? selected.summary;
+										return firstSentence.length > 80 ? `${firstSentence.slice(0, 77)}...` : firstSentence;
+									})()
+								: 'Reported issue'}
+						</h3>
+						{/* Detail: full description — gives the admin the complete context */}
+						<div className="rounded-xl border border-[#E7DBCF] bg-[#FAF6F2] p-3">
+							<p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#9D8A78]">Full Report</p>
+							<p className="text-sm leading-relaxed text-[#624F3E]">{selected?.summary ?? 'Select an issue to review details.'}</p>
+						</div>
+					</div>
 
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-						<div className="overflow-hidden rounded-xl border border-[#E2D6C9] bg-[#D9CFC0] flex items-center justify-center">
+						<div className="overflow-hidden rounded-xl border border-[#E2D6C9] bg-[#D9CFC0] flex items-center justify-center" style={{minHeight: '10rem'}}>
 							{selected?.images && selected.images.length > 0 ? (
 								<img
 									src={selected.images[0].image}
 									alt="Reported issue"
 									className="h-40 w-full object-cover"
+									onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
 								/>
 							) : (
 								<p className="text-sm text-[#8E7E6D]">No images provided</p>

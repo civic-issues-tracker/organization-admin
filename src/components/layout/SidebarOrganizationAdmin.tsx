@@ -29,7 +29,8 @@ const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
 
   const navItems = [
     { label: 'My Queue', to: '/dashboard/queue', icon: ClipboardList, badge: 2 },
-    { label: 'District Map', to: '/dashboard/map', icon: Map },
+    { label: 'Assigned Tickets', to: '/dashboard/assigned', icon: ClipboardList },
+    { label: 'Service Area', to: '/dashboard/map', icon: Map },
     { label: 'Resolved Tickets', to: '/dashboard/resolved', icon: CheckSquare },
   ];
 
@@ -38,7 +39,7 @@ const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
       <div className="mb-8 px-8 border-b border-white/10 pb-4 flex justify-between items-start">
         <div>
           <h1 className="text-[32px] font-extrabold leading-none tracking-tight">CivicWorks</h1>
-          <p className="text-xs text-[#E9D6C0] mt-1">Organization Admin</p>
+          <p className="text-xs text-[#E9D6C0] mt-1">Admin Portal</p>
         </div>
         {onClose && (
           <button onClick={onClose} className="md:hidden p-1 text-white/70 hover:text-white bg-white/10 rounded-full">
@@ -48,16 +49,16 @@ const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
       </div>
 
       <div className="mb-6 mx-4 rounded-2xl bg-[#5D3F2C] p-4">
-        <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7D5A42] text-xs font-bold">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#7D5A42] text-sm font-bold">
             {initials}
           </span>
-          <div>
-            <p className="text-sm font-semibold">{userName}</p>
-            <p className={`flex items-center gap-1 text-[11px] ${statusTextClass}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${statusDotClass}`} />
-              {statusLabel}
-            </p>
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <p className="truncate text-sm font-bold text-white">{userName}</p>
+            <p className="truncate text-[11px] text-[#D8C7B4]">{user?.email || 'No email'}</p>
+            <span className="mt-1 inline-block rounded bg-[#8B674E] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#F8EFE4]">
+              Organization Admin
+            </span>
           </div>
         </div>
       </div>

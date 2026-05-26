@@ -1,9 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { organizationAdminIssueApi } from '../services/organizationAdminIssueService';
-import {
-  getOrganizationAdminWorkspace,
-  updateTicketStatus as updateLocalTicketStatus,
-} from '../organizationAdminWorkspace';
 import {
   toOrganizationAdminTicket,
   type OrganizationAdminIssue,
@@ -32,11 +28,9 @@ const splitResolved = (tickets: OrganizationAdminTicket[]) => {
   return { active, resolved };
 };
 
-export const useOrganizationAdminIssues = (seedValue?: string | null): UseOrganizationAdminIssuesResult => {
-  const seed = seedValue?.trim() || 'organization-admin-default';
-  const fallbackWorkspace = useMemo(() => getOrganizationAdminWorkspace(seed), [seed]);
-  const [tickets, setTickets] = useState<OrganizationAdminTicket[]>(fallbackWorkspace.organizationAdminTickets);
-  const [resolvedTickets, setResolvedTickets] = useState<OrganizationAdminTicket[]>(fallbackWorkspace.resolvedTickets);
+export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrganizationAdminIssuesResult => {
+  const [tickets, setTickets] = useState<OrganizationAdminTicket[]>([]);
+  const [resolvedTickets, setResolvedTickets] = useState<OrganizationAdminTicket[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -60,9 +54,9 @@ export const useOrganizationAdminIssues = (seedValue?: string | null): UseOrgani
         setResolvedTickets(resolved);
       } catch (err) {
         if (!isActive) return;
-        setError(err instanceof Error ? err.message : 'Failed to load issues from the server. Using local cache.');
-        setTickets(fallbackWorkspace.organizationAdminTickets);
-        setResolvedTickets(fallbackWorkspace.resolvedTickets);
+        setError(err instanceof Error ? err.message : 'Failed to load issues from the server.');
+        setTickets([]);
+        setResolvedTickets([]);
       } finally {
         if (isActive) setIsLoading(false);
       }
@@ -72,7 +66,7 @@ export const useOrganizationAdminIssues = (seedValue?: string | null): UseOrgani
     return () => {
       isActive = false;
     };
-  }, [fallbackWorkspace.organizationAdminTickets, fallbackWorkspace.resolvedTickets, reloadKey]);
+  }, [reloadKey]);
 
   const updateStatus = useCallback(
     async (ticketId: string, status: IssueStatus) => {
@@ -106,13 +100,10 @@ export const useOrganizationAdminIssues = (seedValue?: string | null): UseOrgani
           );
         }
       } catch {
-        updateLocalTicketStatus(seed, ticketId, status);
-        const ws = getOrganizationAdminWorkspace(seed);
-        setTickets(ws.organizationAdminTickets);
-        setResolvedTickets(ws.resolvedTickets);
+        throw new Error('Failed to update status.');
       }
     },
-    [seed],
+    [],
   );
 
   const assignUnit = useCallback((ticketId: string, unit: string) => {

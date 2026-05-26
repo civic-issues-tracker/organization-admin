@@ -10,6 +10,7 @@ export interface User {
   phone?: string;
   full_name: string;
   role_name: 'resident' | 'system_admin' | 'organization' | 'organization_admin';
+  organization_name?: string;
   email_verified?: boolean;
   sms_verified?: boolean;
   is_verified?: boolean;

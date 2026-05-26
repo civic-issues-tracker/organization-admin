@@ -8,6 +8,7 @@ import OrganizationAdminDashboardPage from '../features/dashboard-organization-a
 import OrganizationAdminIssuesPage from '../features/dashboard-organization-admin/pages/OrganizationAdminIssuesPage'
 import OrganizationAdminAnalyticsPage from '../features/dashboard-organization-admin/pages/OrganizationAdminAnalyticsPage'
 import OrganizationAdminAlertsPage from '../features/dashboard-organization-admin/pages/OrganizationAdminAlertsPage'
+import OrganizationAdminAssignedTicketsPage from '../features/dashboard-organization-admin/pages/OrganizationAdminAssignedTicketsPage'
 
 const router = createBrowserRouter([
   // --- PUBLIC AUTH SECTION ---
@@ -45,6 +46,10 @@ const router = createBrowserRouter([
       {
         path: 'resolved',
         element: <OrganizationAdminAnalyticsPage />,
+      },
+      {
+        path: 'assigned',
+        element: <OrganizationAdminAssignedTicketsPage />,
       },
       {
         path: 'notifications',

@@ -44,7 +44,7 @@ const OrganizationAdminAnalyticsPage = () => {
 		return resolvedTickets.filter((ticket) => {
 			return (
 				ticket.issueNumber.toLowerCase().includes(q) ||
-				ticket.title.toLowerCase().includes(q) ||
+				(ticket.summary ?? "").toLowerCase().includes(q) ||
 				ticket.location.toLowerCase().includes(q) ||
 				(ticket.category ?? '').toLowerCase().includes(q) ||
 				(ticket.resolutionDate ?? '').toLowerCase().includes(q)
@@ -114,7 +114,7 @@ const OrganizationAdminAnalyticsPage = () => {
 							<button onClick={() => {
 										const rows = filteredReports;
 										const header = ['issueNumber','title','location','category','resolutionDate'];
-										const csv = [header.join(',')].concat(rows.map(r => [r.issueNumber, `"${(r.title ?? '').replaceAll('"', '""')}"`, `"${(r.location ?? '').replaceAll('"', '""')}"`, `"${(r.category ?? '')}"`, `"${(r.resolutionDate ?? '')}"`].join(','))).join('\n');
+										const csv = [header.join(',')].concat(rows.map(r => [r.issueNumber, `"${(r.summary ?? '').replaceAll('"', '""')}"`, `"${(r.location ?? '').replaceAll('"', '""')}"`, `"${(r.category ?? '')}"`, `"${(r.resolutionDate ?? '')}"`].join(','))).join('\n');
 								const blob = new Blob([csv], { type: 'text/csv' });
 								const url = URL.createObjectURL(blob);
 								const a = document.createElement('a');
@@ -141,7 +141,7 @@ const OrganizationAdminAnalyticsPage = () => {
 							{filteredReports.map((ticket) => (
 								<tr key={ticket.id} className="border-t border-[#EFE4D8] text-[#3B2A1E]">
 									<td className="px-4 py-3 font-bold">{ticket.issueNumber}</td>
-									<td className="px-4 py-3 font-semibold">{ticket.title}</td>
+									<td className="px-4 py-3 font-semibold">{ticket.summary}</td>
 									<td className="px-4 py-3">
 										<span className="rounded-full bg-[#EEE6DB] px-2 py-1 text-xs">{ticket.category}</span>
 									</td>
@@ -165,13 +165,6 @@ const OrganizationAdminAnalyticsPage = () => {
 					</table>
 				</div>
 
-				<div className="mt-3 rounded-xl border border-[#DDD0C2] bg-white p-3">
-					<h4 className="mb-2 text-sm font-bold text-[#3E2B1F]">Resolution Trend Notes</h4>
-					<p className="text-sm text-[#6B5646]">
-						Roads & Infrastructure and Lighting categories are trending faster than last month. Three tickets were escalated due to delayed third-party dependencies.
-					</p>
-				</div>
-
 				{activeReport ? (
 					<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
 						<div className="w-full max-w-2xl rounded-3xl border border-[#E5D7C6] bg-[#FCF8F2] p-5 shadow-2xl">
@@ -187,7 +180,7 @@ const OrganizationAdminAnalyticsPage = () => {
 							<div className="mt-4 grid gap-3 md:grid-cols-2">
 								<div className="rounded-2xl border border-[#E6D8C8] bg-white p-4">
 									<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#8B7868]">Issue</p>
-									<p className="mt-2 text-lg font-bold text-[#3A2A1E]">{activeReport.title}</p>
+									<p className="mt-2 text-lg font-bold text-[#3A2A1E]">{activeReport.summary}</p>
 									<p className="mt-1 text-sm text-[#6B5646]">{activeReport.location}</p>
 								</div>
 								<div className="rounded-2xl border border-[#E6D8C8] bg-white p-4">

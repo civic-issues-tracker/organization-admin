@@ -105,6 +105,23 @@ const LoginForm: React.FC = () => {
           user: result.user
         });
 
+        // Add extra call to fetch organization name
+        if (result.user.email && isOrganizationAdminRole(role)) {
+          try {
+            const org = await authService.getUserOrganization(result.user.email);
+            if (org && org.name) {
+              const updatedUser = { ...result.user, organization_name: org.name };
+              login({
+                access: result.access,
+                refresh: result.refresh,
+                user: updatedUser
+              });
+            }
+          } catch (err) {
+            console.error('Failed to fetch org profile:', err);
+          }
+        }
+
         showToast("Login successful!", "success");
 
         if (isOrganizationAdminRole(role)) {
@@ -193,21 +210,15 @@ const LoginForm: React.FC = () => {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-50 group border flex items-center justify-center py-4  border-secondary rounded-full shadow-2xl hover:border-secondary transition-all disabled:opacity-50 mt-4"
+            className="w-50 group flex items-center justify-center py-4 bg-secondary rounded-full shadow-2xl hover:bg-secondary/90 transition-all disabled:opacity-50 mt-4"
           >
-            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-secondary">
-              {loading ? "Authenticating..." : "Access Account"}
+            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white">
+              {loading ? "Authenticating..." : "Login"}
             </span>
-            {loading ? <Loader2 className="animate-spin w-4 h-4" /> : <LogIn size={16} className="group-hover:translate-x-1 transition-transform" />}
+            {loading ? <Loader2 className="animate-spin w-4 h-4 text-white ml-2" /> : <LogIn size={16} className="text-white group-hover:translate-x-1 transition-transform ml-2" />}
           </button>
 
-          <button 
-            type="button"
-            onClick={() => navigate('/signup')}
-            className="text-[9px] font-black uppercase tracking-[0.3em] text-secondary/40 hover:text-secondary transition-colors text-left"
-          >
-            New here? <span className="text-secondary border-b border-secondary/20 ml-1">Create Account</span>
-          </button>
+
         </motion.form>
       ) : (
         <motion.form 

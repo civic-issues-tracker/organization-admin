@@ -1,27 +1,15 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOrganizationAdminIssues } from '../hooks/useOrganizationAdminIssues';
 
-
 const LazyMap = lazy(() => import('../components/OrganizationAdminMap'));
 
-const boleCenter: [number, number] = [8.9907, 38.7991];
+// Fallback center: Addis Ababa city center
+const DEFAULT_CENTER: [number, number] = [9.005401, 38.763611];
 
-// ── helpers ────────────────────────────────────────────────────────────────
-const hashToOffset = (input: string, magnitude = 0.025) => {
-	let hash = 0;
-	for (let i = 0; i < input.length; i += 1) {
-		hash = (hash * 31 + input.charCodeAt(i)) % 100000;
-	}
-	const normalized = (hash % 1000) / 1000;
-	const angle = normalized * Math.PI * 2;
-	const radius = magnitude * (0.35 + (hash % 100) / 100);
-	return {
-		latOffset: Math.sin(angle) * radius,
-		lngOffset: Math.cos(angle) * radius,
-	};
-};
+const toNum = (v: unknown): number =>
+  typeof v === 'number' ? v : parseFloat(v as string);
 
 // ── component ──────────────────────────────────────────────────────────────
 const OrganizationAdminIssuesPage = () => {
@@ -31,36 +19,44 @@ const OrganizationAdminIssuesPage = () => {
 	const { tickets, resolvedTickets, isLoading, error } = useOrganizationAdminIssues(seed);
 
 	const allTickets = tickets.concat(resolvedTickets);
-	const visibleTickets = allTickets.filter((t) => {
-		const q = searchQuery.trim().toLowerCase();
-		if (!q) return true;
-		return (
-			(t.issueNumber ?? '').toLowerCase().includes(q) ||
-			(t.location ?? '').toLowerCase().includes(q) ||
-			(t.title ?? '').toLowerCase().includes(q)
-		);
-	});
 
-	// Use backend coordinates when present; otherwise derive stable offsets so every ticket appears on the map.
-	const boleSites = visibleTickets.map((t) => {
-		const hasCoords = typeof t.lat === 'number' && typeof t.lng === 'number';
-		if (hasCoords) {
-			return {
-				ticket: t,
-				name: t.location || 'Reported Location',
-				lat: t.lat as number,
-				lng: t.lng as number,
-			};
+	// Only keep tickets that have usable GPS coords
+	const visibleTickets = useMemo(() => {
+		return allTickets.filter((t) => {
+			const q = searchQuery.trim().toLowerCase();
+			const matchesSearch = !q || (
+				(t.issueNumber ?? '').toLowerCase().includes(q) ||
+				(t.location ?? '').toLowerCase().includes(q) ||
+				(t.summary ?? '').toLowerCase().includes(q)
+			);
+			// Backend DecimalField may arrive as a string — coerce with parseFloat
+			const lat = toNum(t.lat);
+			const lng = toNum(t.lng);
+			const hasValidCoords = !Number.isNaN(lat) && !Number.isNaN(lng);
+			return matchesSearch && hasValidCoords;
+		});
+	}, [allTickets, searchQuery]);
+
+	// Dynamic center: first issue's coords, or fallback
+	const mapCenter = useMemo<[number, number]>(() => {
+		const first = visibleTickets[0];
+		if (first) {
+			const lat = toNum(first.lat);
+			const lng = toNum(first.lng);
+			if (!Number.isNaN(lat) && !Number.isNaN(lng)) return [lat, lng];
 		}
-		const key = String(t.id ?? t.issueNumber ?? t.title ?? 'ticket');
-		const { latOffset, lngOffset } = hashToOffset(key);
-		return {
+		return DEFAULT_CENTER;
+	}, [visibleTickets]);
+
+	// Build map sites from coerced numbers
+	const mapSites = useMemo(() =>
+		visibleTickets.map((t) => ({
 			ticket: t,
 			name: t.location || 'Reported Location',
-			lat: boleCenter[0] + latOffset,
-			lng: boleCenter[1] + lngOffset,
-		};
-	});
+			lat: toNum(t.lat),
+			lng: toNum(t.lng),
+		})),
+	[visibleTickets]);
 
 	useEffect(() => {
 		if (error) showToast(error, 'error');
@@ -80,8 +76,17 @@ const OrganizationAdminIssuesPage = () => {
 		<section>
 			<header className="mb-3 flex items-start justify-between">
 				<div>
-					<h2 className="text-[42px] font-black leading-tight text-[#3E2B1F]">Bole Subcity Map</h2>
-					<p className="text-sm text-[#857060]">Live location of reported issues in Bole, Addis Ababa.</p>
+					<h2 className="text-[32px] font-black leading-tight text-[#3E2B1F]">
+						{user?.full_name || 'Your Organization'}
+					</h2>
+					<p className="text-xs font-bold uppercase tracking-wider text-[#8F7B69]">
+						Service Area · Issue Map
+					</p>
+					{visibleTickets.length === 0 && !isLoading && (
+						<p className="mt-1 text-xs text-[#B08E6A]">
+							No issues with GPS coordinates yet — pins appear once issues include location data.
+						</p>
+					)}
 				</div>
 				<div className="flex items-center gap-2">
 					<div className="flex items-center rounded-full border border-[#DDCFC0] bg-[#F8F6F2] px-3 py-1.5">
@@ -108,29 +113,13 @@ const OrganizationAdminIssuesPage = () => {
 				{/* Map layer */}
 				<div className="absolute inset-0 z-0">
 					<Suspense fallback={<div className="h-full w-full bg-gray-100" />}>
-						<LazyMap center={boleCenter} sites={boleSites} />
+						<LazyMap center={mapCenter} sites={mapSites} />
 					</Suspense>
 				</div>
-				<div className="absolute inset-0 z-1 bg-linear-to-t from-[#DACEB8]/20 via-transparent to-[#DACEB8]/10 pointer-events-none" />
-
-				{/* Top-left: district overview */}
-				<div className="absolute left-4 top-4 z-20 w-[320px] rounded-3xl border border-white/70 bg-white/95 p-4 shadow-[0_24px_60px_rgba(68,43,24,0.18)] backdrop-blur-md">
-					<p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#8F7B69]">Bole District Overview</p>
-					<h3 className="mt-2 text-lg font-bold text-[#3A2A20]">Active units and live coverage</h3>
-					<div className="mt-3 space-y-2 text-sm">
-						<div className="flex items-center justify-between rounded-xl border border-[#E7DCCF] bg-[#F8F4EE] px-3 py-2">
-							<span>Unit 4 (Edna Mall)</span>
-							<span className="text-xs text-[#7E8A95]">2 mins away</span>
-						</div>
-						<div className="flex items-center justify-between rounded-xl border border-[#E7DCCF] bg-[#F8F4EE] px-3 py-2">
-							<span>Unit 7</span>
-							<span className="text-xs text-[#7E8A95]">Patrol (Bole)</span>
-						</div>
-					</div>
-				</div>
+				<div className="absolute inset-0 z-[1] bg-gradient-to-t from-[#DACEB8]/20 via-transparent to-[#DACEB8]/10 pointer-events-none" />
 
 				{/* Top-right: legend */}
-				<div className="absolute right-4 top-4 z-20 w-55 rounded-3xl border border-white/70 bg-white/95 p-4 shadow-[0_24px_60px_rgba(68,43,24,0.18)] backdrop-blur-md">
+				<div className="absolute right-4 top-4 z-20 w-48 rounded-3xl border border-white/70 bg-white/95 p-4 shadow-[0_24px_60px_rgba(68,43,24,0.18)] backdrop-blur-md">
 					<p className="mb-2 text-[11px] font-bold uppercase text-[#7A6756]">Map Legend</p>
 					<ul className="space-y-1 text-xs text-[#4F3A2A]">
 						<li><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#2563EB]" /> Submitted</li>
@@ -138,6 +127,9 @@ const OrganizationAdminIssuesPage = () => {
 						<li><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#16A34A]" /> Resolved</li>
 						<li><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#DC2626]" /> Rejected</li>
 					</ul>
+					<p className="mt-3 border-t border-[#E7DBCF] pt-2 text-[10px] text-[#9D8A78]">
+						{mapSites.length} issue{mapSites.length !== 1 ? 's' : ''} with GPS data
+					</p>
 				</div>
 			</div>
 		</section>

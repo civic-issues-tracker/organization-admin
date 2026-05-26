@@ -118,6 +118,14 @@ export const authService = {
     return response.data;
   },
 
+  // get user's organization by matching email
+  getUserOrganization: async (email: string) => {
+    const response = await privateApi.get('/organizations/');
+    const organizations = response.data;
+    const org = organizations.find((o: any) => o.admins?.some((a: any) => a.email === email));
+    return org;
+  },
+
   // Admin Management
   registerSystemAdmin: async (data: SystemAdminRegister) => {
     const response = await publicApi.post('/auth/register/system-admin/', data);

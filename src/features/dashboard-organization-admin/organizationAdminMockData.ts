@@ -23,6 +23,8 @@ export interface OrganizationAdminIssue {
   location_lat?: number | null;
   location_long?: number | null;
   created_at: string;
+  // list API returns a single Cloudinary URL; detail API returns the full images[]
+  image_url?: string | null;
   images?: { id: string; image: string; created_at: string }[];
   internal_notes?: string;
   status_history?: { old: string; new: string; date: string; note?: string }[];
@@ -31,10 +33,10 @@ export interface OrganizationAdminIssue {
 export interface OrganizationAdminTicket {
   id: string;
   issueNumber: string;
-  title: string;
   location: string;
   priority: IssuePriority;
   status: IssueStatus;
+  assignedAdminId?: string;
   assignedAdminName?: string;
   reopenReason?: string;
   assignedUnit?: string;
@@ -69,12 +71,6 @@ export interface OrganizationAdminConversation {
   messages: OrganizationAdminMessage[];
 }
 
-const buildTitleFromDescription = (description: string) => {
-  const cleaned = description.replace(/\s+/g, ' ').trim();
-  if (!cleaned) return 'Reported issue';
-  const sentence = cleaned.split(/[.!?]/)[0]?.trim() ?? cleaned;
-  return sentence.length > 64 ? `${sentence.slice(0, 61)}...` : sentence;
-};
 
 export const organizationAdminIssues: OrganizationAdminIssue[] = [
   {
@@ -186,10 +182,10 @@ const buildTimeAgo = (isoDate?: string) => {
 export const toOrganizationAdminTicket = (issue: OrganizationAdminIssue): OrganizationAdminTicket => ({
   id: issue.id,
   issueNumber: issue.issue_number,
-  title: buildTitleFromDescription(issue.description),
   location: issue.location_address,
   priority: issue.priority,
   status: issue.status,
+  assignedAdminId: issue.assigned_to_org_admin ?? undefined,
   assignedAdminName: issue.assigned_admin_name ?? undefined,
   reopenReason: issue.reopen_reason ?? undefined,
   summary: issue.description,
@@ -200,7 +196,12 @@ export const toOrganizationAdminTicket = (issue: OrganizationAdminIssue): Organi
   lat: issue.location_lat ?? undefined,
   lng: issue.location_long ?? undefined,
   internalNotes: issue.internal_notes,
-  images: issue.images,
+  // Prefer the images[] array (from detail API); fall back to the single image_url from list API
+  images: issue.images ?? (
+    issue.image_url
+      ? [{ id: 'cover', image: issue.image_url, created_at: issue.created_at }]
+      : undefined
+  ),
 });
 
 export const chatThreads: OrganizationAdminConversation[] = [
