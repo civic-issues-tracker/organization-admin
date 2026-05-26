@@ -120,7 +120,7 @@ export const authService = {
 
   // get user's organization by matching email
   getUserOrganization: async (email: string) => {
-    const response = await privateApi.get('/organizations/');
+    const response = await privateApi.get('/orgs/organizations/');
     const organizations = response.data;
     const org = organizations.find((o: any) => o.admins?.some((a: any) => a.email === email));
     return org;
