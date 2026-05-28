@@ -1,10 +1,8 @@
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
 import {
   Bell,
   CheckSquare,
   ClipboardList,
-  LogOut,
   Map,
   X
 } from 'lucide-react';
@@ -14,19 +12,6 @@ interface SidebarProps {
 }
 
 const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
-  const { logout, user } = useAuth();
-  const userName = (user?.organization_name ?? user?.full_name)?.trim() || 'Organization Admin';
-  const initials = userName
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-  const isVerified = user?.is_verified ?? false;
-  const statusLabel = isVerified ? 'Verified' : 'Pending Verification';
-  const statusTextClass = isVerified ? 'text-[#7DE2A7]' : 'text-[#F2B1B1]';
-  const statusDotClass = isVerified ? 'bg-[#2BD96B]' : 'bg-[#E05A5A]';
-
   const navItems = [
     { label: 'My Queue', to: '/dashboard/queue', icon: ClipboardList, badge: 2 },
     { label: 'Assigned Tickets', to: '/dashboard/assigned', icon: ClipboardList },
@@ -35,32 +20,17 @@ const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
   ];
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col overflow-y-auto rounded-r-[2rem] md:rounded-r-[4rem] bg-[#6E4B33] py-8 text-[#F6EEE3] shadow-xl">
+    <aside className="flex h-screen w-64 shrink-0 flex-col overflow-y-auto rounded-r-4xl md:rounded-r-[4rem] bg-[#6E4B33] py-8 text-[#F6EEE3] shadow-xl">
       <div className="mb-8 px-8 border-b border-white/10 pb-4 flex justify-between items-start">
         <div>
           <h1 className="text-[32px] font-extrabold leading-none tracking-tight">CivicWorks</h1>
           <p className="text-xs text-[#E9D6C0] mt-1">Admin Portal</p>
         </div>
         {onClose && (
-          <button onClick={onClose} className="md:hidden p-1 text-white/70 hover:text-white bg-white/10 rounded-full">
+          <button onClick={onClose} className="md:hidden p-1 text-white/70 hover:text-white bg-white/10 rounded-full" title="Close sidebar" aria-label="Close sidebar">
             <X size={20} />
           </button>
         )}
-      </div>
-
-      <div className="mb-6 mx-4 rounded-2xl bg-[#5D3F2C] p-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#7D5A42] text-sm font-bold">
-            {initials}
-          </span>
-          <div className="min-w-0 flex-1 overflow-hidden">
-            <p className="truncate text-sm font-bold text-white">{userName}</p>
-            <p className="truncate text-[11px] text-[#D8C7B4]">{user?.email || 'No email'}</p>
-            <span className="mt-1 inline-block rounded bg-[#8B674E] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#F8EFE4]">
-              Organization Admin
-            </span>
-          </div>
-        </div>
       </div>
 
       <nav className="flex-1 space-y-2 px-2">
@@ -102,17 +72,6 @@ const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
           <Bell size={14} />
           Notifications
         </NavLink>
-        <button
-          type="button"
-          onClick={() => {
-            logout();
-            onClose?.();
-          }}
-          className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm text-[#F8C6C6] transition hover:bg-[#5D3F2C]/70"
-        >
-          <LogOut size={14} />
-          Logout
-        </button>
       </div>
     </aside>
   );

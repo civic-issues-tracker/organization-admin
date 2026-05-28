@@ -64,7 +64,7 @@ export default function OrganizationAdminMap({
               <div className="min-w-64 max-w-72">
                 <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#8A725F]">{site.name}</p>
                 <h4 className="mt-1 text-base font-bold text-[#3A2A20]">{site.ticket?.issueNumber ?? site.ticket?.id}</h4>
-                <p className="mt-1 text-sm text-[#5E4A3A]">{site.ticket?.summary}</p>
+                <p className="mt-1 text-sm font-semibold text-[#5E4A3A]">{site.ticket?.title ?? 'Reported issue'}</p>
                 {site.ticket?.images?.[0]?.image ? (
                   <img
                     src={site.ticket.images[0].image}

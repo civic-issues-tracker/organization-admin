@@ -10,6 +10,7 @@ export type IssueStatus =
 export interface OrganizationAdminIssue {
   id: string;
   issue_number: string;
+  title: string;
   description: string;
   category_name?: string;
   subcategory_name?: string;
@@ -33,6 +34,7 @@ export interface OrganizationAdminIssue {
 export interface OrganizationAdminTicket {
   id: string;
   issueNumber: string;
+  title: string;
   location: string;
   priority: IssuePriority;
   status: IssueStatus;
@@ -76,6 +78,7 @@ export const organizationAdminIssues: OrganizationAdminIssue[] = [
   {
     id: '9f8a7d06-3e4c-4ff0-a6e6-5a1b6f2c9b21',
     issue_number: 'CIV-4921ABCD',
+    title: 'Deep pothole on North Ave',
     description:
       'Deep pothole in the right lane going northbound. Several cars hit it and it grows after rain.',
     category_name: 'Roads & Infrastructure',
@@ -88,6 +91,7 @@ export const organizationAdminIssues: OrganizationAdminIssue[] = [
   {
     id: 'b4e7d4b5-7f55-4eb5-9c45-1c2dd75d0c1f',
     issue_number: 'CIV-4918EFGH',
+    title: 'Graffiti at Centennial Park',
     description: 'Offensive graffiti on the south entrance wall of Centennial Park.',
     category_name: 'Vandalism',
     resident_name: 'Marcus Reed',
@@ -99,6 +103,7 @@ export const organizationAdminIssues: OrganizationAdminIssue[] = [
   {
     id: '67b2d7a0-6cb1-4c34-9cf9-cc5a8a10a17a',
     issue_number: 'CIV-4915IJKL',
+    title: 'Broken streetlight at 5th and Elm',
     description: 'Broken streetlight at the intersection; area gets dark at night.',
     category_name: 'Lighting',
     resident_name: 'Paula Brown',
@@ -110,6 +115,7 @@ export const organizationAdminIssues: OrganizationAdminIssue[] = [
   {
     id: 'a7e10ef2-9b73-4cb6-81cf-63cdd9f1aa6e',
     issue_number: 'CIV-4902MNOP',
+    title: 'Illegal dumping behind West Blvd',
     description: 'Illegal dumping in the alley; debris blocks access for deliveries.',
     category_name: 'Sanitation',
     resident_name: 'Public Works Crew 3',
@@ -124,6 +130,7 @@ export const resolvedOrganizationAdminIssues: OrganizationAdminIssue[] = [
   {
     id: '65c7b1d2-2b9a-4c46-80be-3d28c4a1a2e2',
     issue_number: 'CIV-4895QRST',
+    title: 'Pothole repair on Main St',
     description: 'Pothole on Main St repaired and patched.',
     category_name: 'Roads & Infrastructure',
     resident_name: 'Dispatch Center',
@@ -135,6 +142,7 @@ export const resolvedOrganizationAdminIssues: OrganizationAdminIssue[] = [
   {
     id: '31f860d2-2e68-45cb-9f1c-fc851d9f2b0f',
     issue_number: 'CIV-4892UVWX',
+    title: 'Graffiti removed at Central Park',
     description: 'Graffiti removed at Central Park entrance.',
     category_name: 'Vandalism',
     resident_name: 'City Clean-Up',
@@ -146,6 +154,7 @@ export const resolvedOrganizationAdminIssues: OrganizationAdminIssue[] = [
   {
     id: '19de2f06-7fda-4dd5-9691-8a4ec3d6a3a9',
     issue_number: 'CIV-4888YZ12',
+    title: 'Streetlight replacement at 5th and Elm',
     description: 'Streetlight bulb replaced at 5th & Elm.',
     category_name: 'Lighting',
     resident_name: 'Ops Supervisor',
@@ -157,6 +166,7 @@ export const resolvedOrganizationAdminIssues: OrganizationAdminIssue[] = [
   {
     id: '7a9f7a3e-5a3e-4c3b-8e9c-8f6dc9ebc0a7',
     issue_number: 'CIV-4881AB34',
+    title: 'Illegal dumping cleared from West Blvd alley',
     description: 'Illegal dumping cleared from West Blvd alley.',
     category_name: 'Sanitation',
     resident_name: 'Cleanup Team',
@@ -182,6 +192,7 @@ const buildTimeAgo = (isoDate?: string) => {
 export const toOrganizationAdminTicket = (issue: OrganizationAdminIssue): OrganizationAdminTicket => ({
   id: issue.id,
   issueNumber: issue.issue_number,
+  title: issue.title,
   location: issue.location_address,
   priority: issue.priority,
   status: issue.status,

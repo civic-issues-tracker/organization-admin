@@ -47,6 +47,7 @@ const OrganizationAdminAssignedTicketsPage = () => {
     const matchesSearch = !q || (
       (t.issueNumber ?? '').toLowerCase().includes(q) ||
       (t.location ?? '').toLowerCase().includes(q) ||
+      (t.title ?? '').toLowerCase().includes(q) ||
       (t.summary ?? '').toLowerCase().includes(q)
     );
     const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
@@ -109,6 +110,7 @@ const OrganizationAdminAssignedTicketsPage = () => {
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="rounded-2xl border border-[#DDCFC0] bg-white px-4 py-2.5 text-sm font-semibold text-[#857060] shadow-sm outline-none"
+          title="Filter tickets by status"
         >
           <option value="all">All Statuses</option>
           <option value="submitted">Submitted</option>
@@ -146,7 +148,7 @@ const OrganizationAdminAssignedTicketsPage = () => {
                       </span>
                     </div>
                     <h4 className={`mt-1 text-sm font-bold text-[#3E2B1F] leading-snug ${isExpanded ? '' : 'line-clamp-2'}`}>
-                      {ticket.summary}
+                      {ticket.title}
                     </h4>
                     <div className="mt-2 flex items-center justify-between text-xs">
                        <div className="flex items-center text-[#857060] max-w-[60%] truncate">
@@ -209,6 +211,7 @@ const OrganizationAdminAssignedTicketsPage = () => {
                             onClick={() => handleSendNote(ticket)}
                             disabled={!noteText.trim()}
                             className="shrink-0 rounded-lg bg-[#6A4834] p-2 text-white disabled:opacity-50 hover:bg-[#5A3A29] transition-colors"
+                            title="Send note"
                           >
                             <Send size={14} />
                           </button>
@@ -217,13 +220,13 @@ const OrganizationAdminAssignedTicketsPage = () => {
 
                       {/* Right Col: Image & Extra Details */}
                       <div className="flex flex-col gap-4">
-                        <div className="flex-1 overflow-hidden rounded-xl border border-[#DDCFC0] bg-[#EFE8DF] flex items-center justify-center min-h-[140px]">
+                        <div className="flex min-h-35 flex-1 items-center justify-center overflow-hidden rounded-xl border border-[#DDCFC0] bg-[#EFE8DF]">
                           {ticket.images && ticket.images.length > 0 ? (
                             <img
                               src={ticket.images[0].image}
                               alt="Issue"
                               className="h-full w-full object-cover"
-                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           ) : (
                             <div className="flex flex-col items-center text-[#A49484]">

@@ -35,11 +35,30 @@ const formatStatusLabel = (status?: OrganizationAdminTicket['status']) => {
 	return statusLabels[status] ?? 'Submitted';
 };
 
-const formatIssueTitle = (summary?: string, maxLength = 72) => {
-	const cleaned = summary?.replace(/\s+/g, ' ').trim();
-	if (!cleaned) return 'Reported issue';
-	const sentence = cleaned.split(/[.!?]/)[0]?.trim() ?? cleaned;
-	return sentence.length > maxLength ? `${sentence.slice(0, maxLength - 3)}...` : sentence;
+type StatusModalMode = 'status' | 'release' | 'escalate';
+
+type StatusModalState = {
+	ticket: OrganizationAdminTicket;
+	mode: StatusModalMode;
+	nextStatus: OrganizationAdminTicket['status'];
+	note: string;
+};
+
+const getStatusModalHeading = (mode: StatusModalMode) => {
+	if (mode === 'release') return 'Release Issue';
+	if (mode === 'escalate') return 'Escalate Issue';
+	return 'Status Transition';
+};
+
+const getStatusModalFieldLabel = (mode: StatusModalMode) => {
+	if (mode === 'release') return 'Release note';
+	if (mode === 'escalate') return 'Escalation reason';
+	return 'Internal note';
+};
+
+const getStatusModalPlaceholder = (mode: StatusModalMode) => {
+	if (mode === 'escalate') return 'Describe why this issue should be escalated...';
+	return 'Add an optional internal note...';
 };
 
 const OrganizationAdminDashboardPage = () => {
@@ -49,6 +68,7 @@ const OrganizationAdminDashboardPage = () => {
 	const [searchQuery, setSearchQuery] = useState('');
 	const { tickets, resolvedTickets, isLoading, error, updateStatus, updateInternalNotes, releaseIssue, escalateIssue } = useOrganizationAdminIssues(seed);
 	const [showResolved, setShowResolved] = useState(false);
+	const [statusModal, setStatusModal] = useState<StatusModalState | null>(null);
 	// role_name from backend is 'organization_admin' — use full_name as the org name
 	const orgName = user?.full_name ||
 		((user as any)?.role_name === 'organization_admin' ? user?.full_name : null) ||
@@ -112,6 +132,7 @@ const OrganizationAdminDashboardPage = () => {
 		return (
 			t.issueNumber.toLowerCase().includes(q) ||
 			(t.location ?? '').toLowerCase().includes(q) ||
+			(t.title ?? '').toLowerCase().includes(q) ||
 			(t.summary ?? '').toLowerCase().includes(q)
 		);
 	});
@@ -126,6 +147,9 @@ const OrganizationAdminDashboardPage = () => {
 	);
 	const statusLabel = formatStatusLabel(selected?.status);
 	const assignedAdminName = selected?.assignedAdminName?.trim() || '';
+	const statusModalHeading = statusModal ? getStatusModalHeading(statusModal.mode) : '';
+	const statusModalFieldLabel = statusModal ? getStatusModalFieldLabel(statusModal.mode) : '';
+	const statusModalPlaceholder = statusModal ? getStatusModalPlaceholder(statusModal.mode) : '';
 	// The backend returns assigned_admin_name as User.__str__() → "Full Name (email@example.com)"
 	// We must check if the current user's email OR full_name appears in that string.
 	const currentEmail = (user?.email || '').trim().toLowerCase();
@@ -139,34 +163,72 @@ const OrganizationAdminDashboardPage = () => {
 		);
 	const isLockedByOther = assignedAdminName.length > 0 && !isAssignedToCurrentUser;
 
-	const setIssueStatus = async (status: OrganizationAdminTicket['status']) => {
-		if (!selected || selected.status === status) return;
+	const openStatusModal = (mode: StatusModalMode, nextStatus: OrganizationAdminTicket['status']) => {
+		if (!selected || selected.status === nextStatus) return;
 		if (isLockedByOther) {
 			showToast(`This issue is locked by ${assignedAdminName}.`, 'error');
 			return;
 		}
-		const notePrompt = globalThis.prompt(`Add a note for status change to ${formatStatusLabel(status)} (optional):`);
-		if (notePrompt === null) return;
-		const note = notePrompt.trim();
-		if (!note) {
+		setStatusModal({ ticket: selected, mode, nextStatus, note: '' });
+	};
+
+	const closeStatusModal = () => setStatusModal(null);
+
+	const confirmStatusModal = async () => {
+		if (!statusModal) return;
+		const { ticket, mode, nextStatus } = statusModal;
+		const note = statusModal.note.trim();
+		if (mode === 'escalate' && !note) {
+			showToast('Escalation reason is required.', 'error');
+			return;
+		}
+		if ((mode === 'status' || mode === 'release') && !note) {
 			showToast('No note provided for this status change.', 'error');
 		}
 		try {
-			await updateStatus(selected.id, status);
-			if (note) {
-				const newNoteText = selected.internalNotes
-					? `${selected.internalNotes}\n\n[${new Date().toLocaleString()}] Status -> ${formatStatusLabel(status)}: ${note}`
-					: `[${new Date().toLocaleString()}] Status -> ${formatStatusLabel(status)}: ${note}`;
-				await updateInternalNotes(selected.id, newNoteText);
+			if (mode === 'status') {
+				await updateStatus(ticket.id, nextStatus);
+				if (note) {
+					const newNoteText = ticket.internalNotes
+						? `${ticket.internalNotes}\n\n[${new Date().toLocaleString()}] Status -> ${formatStatusLabel(nextStatus)}: ${note}`
+						: `[${new Date().toLocaleString()}] Status -> ${formatStatusLabel(nextStatus)}: ${note}`;
+					await updateInternalNotes(ticket.id, newNoteText);
+				}
+				showToast(`Status updated to ${formatStatusLabel(nextStatus)} for ${ticket.issueNumber}.`, 'success');
+			} else if (mode === 'release') {
+				await releaseIssue(ticket.id, note || undefined);
+				if (note) {
+					const newNoteText = ticket.internalNotes
+						? `${ticket.internalNotes}\n\n[${new Date().toLocaleString()}] Release: ${note}`
+						: `[${new Date().toLocaleString()}] Release: ${note}`;
+					await updateInternalNotes(ticket.id, newNoteText);
+				}
+				showToast(`Issue ${ticket.issueNumber} released.`, 'success');
+			} else {
+				await escalateIssue(ticket.id, note);
+				const newNoteText = ticket.internalNotes
+					? `${ticket.internalNotes}\n\n[${new Date().toLocaleString()}] Escalated: ${note}`
+					: `[${new Date().toLocaleString()}] Escalated: ${note}`;
+				await updateInternalNotes(ticket.id, newNoteText);
+				showToast(`Issue ${ticket.issueNumber} escalated to system admin.`, 'success');
 			}
-			showToast(`Status updated to ${formatStatusLabel(status)} for ${selected.issueNumber}.`, 'success');
+			closeStatusModal();
 		} catch (err) {
 			console.error('Failed to update status', err);
 			showToast('Failed to update status.', 'error');
 		}
 	};
 
-	const cycleStatus = async () => {
+	const setIssueStatus = (status: OrganizationAdminTicket['status']) => {
+		if (!selected || selected.status === status) return;
+		if (isLockedByOther) {
+			showToast(`This issue is locked by ${assignedAdminName}.`, 'error');
+			return;
+		}
+		openStatusModal('status', status);
+	};
+
+	const cycleStatus = () => {
 		if (!selected) return;
 		const order: OrganizationAdminTicket['status'][] = ['submitted', 'in_progress', 'resolved'];
 		const current =
@@ -174,25 +236,7 @@ const OrganizationAdminDashboardPage = () => {
 				? 'submitted'
 				: selected.status;
 		const next = order[(order.indexOf(current) + 1) % order.length];
-		const notePrompt = globalThis.prompt(`Add a note for status change to ${formatStatusLabel(next)} (optional):`);
-		if (notePrompt === null) return;
-		const note = notePrompt.trim();
-		if (!note) {
-			showToast('No note provided for this status change.', 'error');
-		}
-		try {
-			await updateStatus(selected.id, next);
-			if (note) {
-				const newNoteText = selected.internalNotes
-					? `${selected.internalNotes}\n\n[${new Date().toLocaleString()}] Status -> ${formatStatusLabel(next)}: ${note}`
-					: `[${new Date().toLocaleString()}] Status -> ${formatStatusLabel(next)}: ${note}`;
-				await updateInternalNotes(selected.id, newNoteText);
-			}
-			showToast(`Status updated to ${formatStatusLabel(next)} for ${selected.issueNumber}.`, 'success');
-		} catch (err) {
-			console.error('Failed to update status', err);
-			showToast('Failed to update status.', 'error');
-		}
+		openStatusModal('status', next);
 	};
 
 	const openDirections = () => {
@@ -225,20 +269,7 @@ const OrganizationAdminDashboardPage = () => {
 			showToast('Only the assigned admin can release this issue.', 'error');
 			return;
 		}
-		const notePrompt = globalThis.prompt('Add a release note (optional):');
-		if (notePrompt === null) return;
-		const note = notePrompt.trim();
-		if (!note) {
-			showToast('No note provided for this status change.', 'error');
-		}
-		await releaseIssue(selected.id, note || undefined);
-		if (note) {
-			const newNoteText = selected.internalNotes
-				? `${selected.internalNotes}\n\n[${new Date().toLocaleString()}] Release: ${note}`
-				: `[${new Date().toLocaleString()}] Release: ${note}`;
-			await updateInternalNotes(selected.id, newNoteText);
-		}
-		showToast(`Issue ${selected.issueNumber} released.`, 'success');
+		openStatusModal('release', 'submitted');
 	};
 
 	const handleEscalate = async () => {
@@ -247,17 +278,7 @@ const OrganizationAdminDashboardPage = () => {
 			showToast(`This issue is locked by ${assignedAdminName}.`, 'error');
 			return;
 		}
-		const reason = globalThis.prompt('Why are you escalating this issue?');
-		if (!reason?.trim()) {
-			showToast('Escalation reason is required.', 'error');
-			return;
-		}
-		await escalateIssue(selected.id, reason.trim());
-		const newNoteText = selected.internalNotes
-			? `${selected.internalNotes}\n\n[${new Date().toLocaleString()}] Escalated: ${reason.trim()}`
-			: `[${new Date().toLocaleString()}] Escalated: ${reason.trim()}`;
-		await updateInternalNotes(selected.id, newNoteText);
-		showToast(`Issue ${selected.issueNumber} escalated to system admin.`, 'success');
+		openStatusModal('escalate', 'escalated');
 	};
 
 	if (isLoading && tickets.length === 0) {
@@ -361,7 +382,7 @@ const OrganizationAdminDashboardPage = () => {
 											{formatStatusLabel(ticket.status)}
 										</span>
 									</div>
-									<h4 className="text-sm font-semibold text-[#362518]">{formatIssueTitle(ticket.summary, 58)}</h4>
+									<h4 className="text-sm font-semibold text-[#362518]">{ticket.title}</h4>
 									<p className="mt-1 text-xs text-[#8A7767]">{ticket.location}</p>
 									<div className="mt-2 flex flex-wrap items-center gap-1 text-[10px]">
 										{ticket.assignedAdminName ? (
@@ -416,7 +437,7 @@ const OrganizationAdminDashboardPage = () => {
 														{formatStatusLabel(ticket.status)}
 													</span>
 												</div>
-												<h4 className="text-sm font-semibold text-[#362518]">{formatIssueTitle(ticket.summary, 58)}</h4>
+												<h4 className="text-sm font-semibold text-[#362518]">{ticket.title}</h4>
 												<p className="mt-1 text-xs text-[#8A7767]">{ticket.location}</p>
 												<div className="mt-2 flex flex-wrap items-center gap-1 text-[10px]">
 													{ticket.assignedAdminName ? (
@@ -508,14 +529,8 @@ const OrganizationAdminDashboardPage = () => {
 							<span className="font-mono text-sm font-bold text-[#6B4C33]">{selected?.issueNumber}</span>
 							<span className="rounded-full bg-[#E5D5C5] px-2 py-0.5 text-xs font-semibold text-[#5A4737]">{selected?.category || 'General'}</span>
 						</div>
-						{/* Title: first sentence only (max 80 chars) — distinct from the full detail below */}
 						<h3 className="mb-2 text-base font-bold leading-snug text-[#2E2016]">
-							{selected?.summary
-								? (() => {
-										const firstSentence = selected.summary.split(/[.!?]/)[0]?.trim() ?? selected.summary;
-										return firstSentence.length > 80 ? `${firstSentence.slice(0, 77)}...` : firstSentence;
-									})()
-								: 'Reported issue'}
+							{selected?.title ?? selected?.summary ?? 'Reported issue'}
 						</h3>
 						{/* Detail: full description — gives the admin the complete context */}
 						<div className="rounded-xl border border-[#E7DBCF] bg-[#FAF6F2] p-3">
@@ -531,7 +546,7 @@ const OrganizationAdminDashboardPage = () => {
 									src={selected.images[0].image}
 									alt="Reported issue"
 									className="h-40 w-full object-cover"
-									onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+									onError={(e) => { e.currentTarget.style.display = 'none'; }}
 								/>
 							) : (
 								<p className="text-sm text-[#8E7E6D]">No images provided</p>
@@ -586,6 +601,37 @@ const OrganizationAdminDashboardPage = () => {
 					</div>
 				) : null}
 			</div>
+
+			{statusModal ? (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+					<div className="w-full max-w-lg rounded-3xl border border-[#E2D6C9] bg-[#FCF8F2] p-5 shadow-2xl">
+						<div className="mb-4">
+							<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#8E7A69]">{statusModalHeading}</p>
+							<h3 className="mt-1 text-2xl font-black text-[#3E2B1F]">{statusModal.ticket.issueNumber}</h3>
+							<p className="mt-1 text-sm text-[#6B5646]">Current status: <span className="font-semibold text-[#3E2A1E]">{formatStatusLabel(statusModal.ticket.status)}</span></p>
+							<p className="text-sm text-[#6B5646]">New status: <span className="font-semibold text-[#3E2A1E]">{formatStatusLabel(statusModal.nextStatus)}</span></p>
+						</div>
+						<label className="block">
+							<span className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-[#8B7868]">{statusModalFieldLabel}</span>
+							<textarea
+								value={statusModal.note}
+								onChange={(e) => setStatusModal((prev) => prev ? { ...prev, note: e.target.value } : prev)}
+								rows={5}
+								placeholder={statusModalPlaceholder}
+								className="w-full rounded-2xl border border-[#DCCFC1] bg-white px-4 py-3 text-sm text-[#4A3628] outline-none focus:border-[#C9A78A]"
+							/>
+						</label>
+						<div className="mt-5 flex items-center justify-end gap-2">
+							<button type="button" onClick={closeStatusModal} className="rounded-full border border-[#D8CCBD] bg-white px-4 py-2 text-sm font-semibold text-[#6D5A48]">
+								Cancel
+							</button>
+							<button type="button" onClick={confirmStatusModal} className="rounded-full bg-[#6A4834] px-4 py-2 text-sm font-semibold text-white">
+								Confirm
+							</button>
+						</div>
+					</div>
+				</div>
+			) : null}
 		</section>
 	);
 };

@@ -1,16 +1,40 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Menu, Building2 } from 'lucide-react';
+import { ChevronDown, Menu, Building2, LogOut } from 'lucide-react';
 import SidebarOrganizationAdmin from '../../components/layout/SidebarOrganizationAdmin';
 import { useAuth } from '../../hooks/useAuth';
 
 const OrganizationAdminDashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const { user, logout } = useAuth();
   const location = useLocation();
+  const desktopProfileRef = useRef<HTMLDivElement | null>(null);
+  const mobileProfileRef = useRef<HTMLDivElement | null>(null);
 
   // Backend role_name is 'organization_admin'; for org admin users, full_name is the org name
   const currentOrgName = user?.organization_name ?? user?.full_name ?? 'Your Organization';
+  const currentOrgEmail = user?.email ?? 'No email';
+  const orgInitials = currentOrgName
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      const isInsideDesktop = desktopProfileRef.current?.contains(target) ?? false;
+      const isInsideMobile = mobileProfileRef.current?.contains(target) ?? false;
+      if (!isInsideDesktop && !isInsideMobile) {
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, []);
 
   const pageName = useMemo(() => {
     const path = location.pathname;
@@ -26,9 +50,11 @@ const OrganizationAdminDashboardLayout = () => {
     <div className="flex h-screen overflow-hidden bg-[#F6F2EA]">
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div 
+        <button 
+          type="button"
           className="fixed inset-0 z-40 bg-black/50 md:hidden"
           onClick={() => setSidebarOpen(false)}
+          aria-label="Close sidebar"
         />
       )}
 
@@ -44,8 +70,9 @@ const OrganizationAdminDashboardLayout = () => {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Desktop Header — centered, self-expanding rounded pill */}
-        <header className="hidden md:flex items-center justify-center px-6 py-4 z-30 shrink-0 bg-transparent">
-          <div className="inline-flex items-center gap-4 rounded-full border border-[#E0D3C4] bg-white px-6 py-3 shadow-sm" style={{ maxWidth: '75%' }}>
+        <header className="hidden md:grid grid-cols-[1fr_auto_auto] items-center px-6 py-4 z-30 shrink-0 bg-transparent">
+          <div />
+          <div className="inline-flex max-w-[75%] translate-x-6 items-center gap-4 rounded-full border border-[#E0D3C4] bg-white px-6 py-3 shadow-sm">
             <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-[#6E4B33]/10 text-[#6E4B33]">
               <Building2 size={20} />
             </div>
@@ -54,6 +81,46 @@ const OrganizationAdminDashboardLayout = () => {
               <p className="text-[11px] font-bold text-[#9A8070] mt-0.5 truncate uppercase tracking-wider">{pageName}</p>
             </div>
           </div>
+          <div ref={desktopProfileRef} className="relative justify-self-end">
+            <button
+              type="button"
+              onClick={() => setProfileOpen((open) => !open)}
+              className="flex items-center gap-2 rounded-full border border-[#E0D3C4] bg-white px-3 py-2 shadow-sm transition hover:border-[#C9A78A]"
+              title="Open organization profile menu"
+              aria-label="Open organization profile menu"
+              aria-haspopup="menu"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#7D5A42] text-sm font-bold text-[#F8EFE4]">
+                {orgInitials}
+              </span>
+              <ChevronDown size={16} className="text-[#8B7767]" />
+            </button>
+
+            {profileOpen ? (
+              <div className="absolute right-0 top-full mt-3 w-72 overflow-hidden rounded-3xl border border-[#E0D3C4] bg-white shadow-2xl">
+                <div className="p-4">
+                  <p className="text-lg font-black leading-tight text-[#3E2B1F]">{currentOrgName}</p>
+                  <p className="mt-1 text-sm text-[#8A7767] break-all">{currentOrgEmail}</p>
+                  <span className="mt-3 inline-block rounded bg-[#8B674E] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#F8EFE4]">
+                    Organization Admin
+                  </span>
+                </div>
+                <div className="border-t border-[#EAE0D3]" />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setProfileOpen(false);
+                    await logout();
+                  }}
+                  title="Logout"
+                  className="flex w-full items-center gap-2 bg-[#6E4B33] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#5A3A29]"
+                >
+                  <LogOut size={14} />
+                  Logout
+                </button>
+              </div>
+            ) : null}
+          </div>
         </header>
 
         {/* Mobile Header — hamburger left, org pill centered */}
@@ -61,6 +128,8 @@ const OrganizationAdminDashboardLayout = () => {
           <button
             onClick={() => setSidebarOpen(true)}
             className="shrink-0 p-1.5 text-[#6E4B33] hover:bg-white/50 rounded-lg transition"
+            title="Open sidebar"
+            aria-label="Open sidebar"
           >
             <Menu size={22} />
           </button>
@@ -73,8 +142,45 @@ const OrganizationAdminDashboardLayout = () => {
               <p className="text-[10px] font-bold text-[#9A8070] mt-0.5 truncate uppercase tracking-wider">{pageName}</p>
             </div>
           </div>
-          {/* Spacer to keep pill centered */}
-          <div className="shrink-0 w-8" />
+          <div ref={mobileProfileRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setProfileOpen((open) => !open)}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E0D3C4] bg-white shadow-sm"
+              title="Open organization profile menu"
+              aria-label="Open organization profile menu"
+              aria-haspopup="menu"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7D5A42] text-xs font-bold text-[#F8EFE4]">
+                {orgInitials}
+              </span>
+            </button>
+
+            {profileOpen ? (
+              <div className="absolute right-0 top-full mt-3 w-72 overflow-hidden rounded-3xl border border-[#E0D3C4] bg-white shadow-2xl">
+                <div className="p-4">
+                  <p className="text-lg font-black leading-tight text-[#3E2B1F]">{currentOrgName}</p>
+                  <p className="mt-1 text-sm text-[#8A7767] break-all">{currentOrgEmail}</p>
+                  <span className="mt-3 inline-block rounded bg-[#8B674E] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#F8EFE4]">
+                    Organization Admin
+                  </span>
+                </div>
+                <div className="border-t border-[#EAE0D3]" />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setProfileOpen(false);
+                    await logout();
+                  }}
+                  title="Logout"
+                  className="flex w-full items-center gap-2 bg-[#6E4B33] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#5A3A29]"
+                >
+                  <LogOut size={14} />
+                  Logout
+                </button>
+              </div>
+            ) : null}
+          </div>
         </header>
 
 

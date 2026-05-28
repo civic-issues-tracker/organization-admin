@@ -9,7 +9,11 @@ const LazyMap = lazy(() => import('../components/OrganizationAdminMap'));
 const DEFAULT_CENTER: [number, number] = [9.005401, 38.763611];
 
 const toNum = (v: unknown): number =>
-  typeof v === 'number' ? v : parseFloat(v as string);
+  typeof v === 'number' ? v : Number.parseFloat(v as string);
+
+const hasValidLocation = (ticket: { lat?: number; lng?: number }) => {
+	return Number.isFinite(ticket.lat ?? Number.NaN) && Number.isFinite(ticket.lng ?? Number.NaN) && ticket.lat !== 0 && ticket.lng !== 0;
+};
 
 // ── component ──────────────────────────────────────────────────────────────
 const OrganizationAdminIssuesPage = () => {
@@ -19,6 +23,7 @@ const OrganizationAdminIssuesPage = () => {
 	const { tickets, resolvedTickets, isLoading, error } = useOrganizationAdminIssues(seed);
 
 	const allTickets = tickets.concat(resolvedTickets);
+	const ticketsWithoutLocation = allTickets.filter((ticket) => !hasValidLocation({ lat: ticket.lat, lng: ticket.lng }));
 
 	// Only keep tickets that have usable GPS coords
 	const visibleTickets = useMemo(() => {
@@ -27,12 +32,13 @@ const OrganizationAdminIssuesPage = () => {
 			const matchesSearch = !q || (
 				(t.issueNumber ?? '').toLowerCase().includes(q) ||
 				(t.location ?? '').toLowerCase().includes(q) ||
+				(t.title ?? '').toLowerCase().includes(q) ||
 				(t.summary ?? '').toLowerCase().includes(q)
 			);
 			// Backend DecimalField may arrive as a string — coerce with parseFloat
 			const lat = toNum(t.lat);
 			const lng = toNum(t.lng);
-			const hasValidCoords = !Number.isNaN(lat) && !Number.isNaN(lng);
+			const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0;
 			return matchesSearch && hasValidCoords;
 		});
 	}, [allTickets, searchQuery]);
@@ -57,6 +63,7 @@ const OrganizationAdminIssuesPage = () => {
 			lng: toNum(t.lng),
 		})),
 	[visibleTickets]);
+	const issueCountLabel = mapSites.length === 1 ? 'issue' : 'issues';
 
 	useEffect(() => {
 		if (error) showToast(error, 'error');
@@ -82,6 +89,11 @@ const OrganizationAdminIssuesPage = () => {
 					<p className="text-xs font-bold uppercase tracking-wider text-[#8F7B69]">
 						Service Area · Issue Map
 					</p>
+					{ticketsWithoutLocation.length > 0 ? (
+						<span className="mt-2 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+							No location data: {ticketsWithoutLocation.length}
+						</span>
+					) : null}
 					{visibleTickets.length === 0 && !isLoading && (
 						<p className="mt-1 text-xs text-[#B08E6A]">
 							No issues with GPS coordinates yet — pins appear once issues include location data.
@@ -116,7 +128,7 @@ const OrganizationAdminIssuesPage = () => {
 						<LazyMap center={mapCenter} sites={mapSites} />
 					</Suspense>
 				</div>
-				<div className="absolute inset-0 z-[1] bg-gradient-to-t from-[#DACEB8]/20 via-transparent to-[#DACEB8]/10 pointer-events-none" />
+				<div className="absolute inset-0 z-1 bg-linear-to-t from-[#DACEB8]/20 via-transparent to-[#DACEB8]/10 pointer-events-none" />
 
 				{/* Top-right: legend */}
 				<div className="absolute right-4 top-4 z-20 w-48 rounded-3xl border border-white/70 bg-white/95 p-4 shadow-[0_24px_60px_rgba(68,43,24,0.18)] backdrop-blur-md">
@@ -128,8 +140,13 @@ const OrganizationAdminIssuesPage = () => {
 						<li><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#DC2626]" /> Rejected</li>
 					</ul>
 					<p className="mt-3 border-t border-[#E7DBCF] pt-2 text-[10px] text-[#9D8A78]">
-						{mapSites.length} issue{mapSites.length !== 1 ? 's' : ''} with GPS data
+						{mapSites.length} {issueCountLabel} with GPS data
 					</p>
+					{ticketsWithoutLocation.length > 0 ? (
+						<p className="mt-2 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800">
+							{ticketsWithoutLocation.length} hidden without location
+						</p>
+					) : null}
 				</div>
 			</div>
 		</section>
