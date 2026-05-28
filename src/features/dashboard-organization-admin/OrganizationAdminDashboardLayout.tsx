@@ -10,7 +10,7 @@ const OrganizationAdminDashboardLayout = () => {
   const location = useLocation();
 
   // Backend role_name is 'organization_admin'; for org admin users, full_name is the org name
-  const currentOrgName = user?.full_name || 'Your Organization';
+  const currentOrgName = user?.organization_name ?? user?.full_name ?? 'Your Organization';
 
   const pageName = useMemo(() => {
     const path = location.pathname;

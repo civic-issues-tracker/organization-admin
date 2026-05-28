@@ -15,7 +15,7 @@ interface SidebarProps {
 
 const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
   const { logout, user } = useAuth();
-  const userName = user?.full_name?.trim() || 'Organization Admin';
+  const userName = (user?.organization_name ?? user?.full_name)?.trim() || 'Organization Admin';
   const initials = userName
     .split(/\s+/)
     .map((part) => part[0])

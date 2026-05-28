@@ -122,7 +122,7 @@ export const authService = {
   getUserOrganization: async (email: string) => {
     const response = await privateApi.get('/orgs/organizations/');
     const organizations = response.data;
-    const org = organizations.find((o: any) => o.admins?.some((a: any) => a.email === email));
+    const org = organizations.find((o: any) => o.admins?.some((a: any) => a.email?.toLowerCase().trim() === email?.toLowerCase().trim()));
     return org;
   },
 
