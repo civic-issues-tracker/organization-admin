@@ -7,6 +7,10 @@ import {
   type IssueStatus,
 } from '../organizationAdminMockData';
 
+let cachedTickets: OrganizationAdminTicket[] = [];
+let cachedResolvedTickets: OrganizationAdminTicket[] = [];
+let hasCachedIssues = false;
+
 interface UseOrganizationAdminIssuesResult {
   tickets: OrganizationAdminTicket[];
   resolvedTickets: OrganizationAdminTicket[];
@@ -29,9 +33,9 @@ const splitResolved = (tickets: OrganizationAdminTicket[]) => {
 };
 
 export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrganizationAdminIssuesResult => {
-  const [tickets, setTickets] = useState<OrganizationAdminTicket[]>([]);
-  const [resolvedTickets, setResolvedTickets] = useState<OrganizationAdminTicket[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [tickets, setTickets] = useState<OrganizationAdminTicket[]>(cachedTickets);
+  const [resolvedTickets, setResolvedTickets] = useState<OrganizationAdminTicket[]>(cachedResolvedTickets);
+  const [isLoading, setIsLoading] = useState(!hasCachedIssues);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const refresh = useCallback(() => {
@@ -52,11 +56,17 @@ export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrgan
         const { active, resolved } = splitResolved(mapped);
         setTickets(active);
         setResolvedTickets(resolved);
+        cachedTickets = active;
+        cachedResolvedTickets = resolved;
+        hasCachedIssues = true;
       } catch (err) {
         if (!isActive) return;
         setError(err instanceof Error ? err.message : 'Failed to load issues from the server.');
         setTickets([]);
         setResolvedTickets([]);
+        cachedTickets = [];
+        cachedResolvedTickets = [];
+        hasCachedIssues = false;
       } finally {
         if (isActive) setIsLoading(false);
       }
@@ -80,24 +90,43 @@ export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrgan
         if (updatedTicket && isResolvedStatus(updatedTicket.status)) {
           // Moving TO resolved: remove from active, add to resolved
           setTickets((prev) => prev.filter((t) => t.id !== ticketId));
-          setResolvedTickets((prev) => [updatedTicket, ...prev.filter((t) => t.id !== ticketId)]);
+          setResolvedTickets((prev) => {
+            const next = [updatedTicket, ...prev.filter((t) => t.id !== ticketId)];
+            cachedTickets = cachedTickets.filter((t) => t.id !== ticketId);
+            cachedResolvedTickets = next;
+            return next;
+          });
         } else if (updatedTicket) {
           // Moving AWAY from resolved (or between active statuses):
           // remove from resolved list and ensure it exists in active list
-          setResolvedTickets((prev) => prev.filter((t) => t.id !== ticketId));
+          setResolvedTickets((prev) => {
+            const nextResolved = prev.filter((t) => t.id !== ticketId);
+            cachedResolvedTickets = nextResolved;
+            return nextResolved;
+          });
           setTickets((prev) => {
             const exists = prev.some((t) => t.id === ticketId);
             if (exists) {
-              return prev.map((t) => (t.id === ticketId ? updatedTicket : t));
+              const next = prev.map((t) => (t.id === ticketId ? updatedTicket : t));
+              cachedTickets = next;
+              return next;
             }
             // Ticket was in resolvedTickets — bring it back to active
-            return [updatedTicket, ...prev];
+            const next = [updatedTicket, ...prev];
+            cachedTickets = next;
+            return next;
           });
         } else {
-          setResolvedTickets((prev) => prev.filter((t) => t.id !== ticketId));
-          setTickets((prev) =>
-            prev.map((t) => (t.id === ticketId ? { ...t, status } : t))
-          );
+          setResolvedTickets((prev) => {
+            const nextResolved = prev.filter((t) => t.id !== ticketId);
+            cachedResolvedTickets = nextResolved;
+            return nextResolved;
+          });
+          setTickets((prev) => {
+            const next = prev.map((t) => (t.id === ticketId ? { ...t, status } : t));
+            cachedTickets = next;
+            return next;
+          });
         }
       } catch {
         throw new Error('Failed to update status.');
@@ -107,9 +136,11 @@ export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrgan
   );
 
   const assignUnit = useCallback((ticketId: string, unit: string) => {
-    setTickets((prev) =>
-      prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, assignedUnit: unit } : ticket)),
-    );
+    setTickets((prev) => {
+      const next = prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, assignedUnit: unit } : ticket));
+      cachedTickets = next;
+      return next;
+    });
   }, []);
 
   const updateInternalNotes = useCallback(
@@ -121,13 +152,27 @@ export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrgan
           ? toOrganizationAdminTicket(updated as OrganizationAdminIssue)
           : null;
         if (updatedTicket) {
-          setTickets((prev) => prev.map((ticket) => (ticket.id === ticketId ? updatedTicket : ticket)));
-          setResolvedTickets((prev) => prev.map((ticket) => (ticket.id === ticketId ? updatedTicket : ticket)));
+          setTickets((prev) => {
+            const next = prev.map((ticket) => (ticket.id === ticketId ? updatedTicket : ticket));
+            cachedTickets = next;
+            return next;
+          });
+          setResolvedTickets((prev) => {
+            const next = prev.map((ticket) => (ticket.id === ticketId ? updatedTicket : ticket));
+            cachedResolvedTickets = next;
+            return next;
+          });
         } else {
-          setTickets((prev) => prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, internalNotes: notes } : ticket)));
-          setResolvedTickets((prev) =>
-            prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, internalNotes: notes } : ticket))
-          );
+          setTickets((prev) => {
+            const next = prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, internalNotes: notes } : ticket));
+            cachedTickets = next;
+            return next;
+          });
+          setResolvedTickets((prev) => {
+            const next = prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, internalNotes: notes } : ticket));
+            cachedResolvedTickets = next;
+            return next;
+          });
         }
       } catch (err) {
         console.error('Failed to update internal notes', err);
@@ -140,14 +185,20 @@ export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrgan
   const releaseIssue = useCallback(
     async (ticketId: string, note?: string) => {
       await organizationAdminIssueApi.release(ticketId, note);
-      setTickets((prev) =>
-        prev.map((ticket) =>
+      setTickets((prev) => {
+        const next = prev.map((ticket) =>
           ticket.id === ticketId
             ? { ...ticket, status: 'submitted', assignedAdminName: undefined }
             : ticket
-        )
-      );
-      setResolvedTickets((prev) => prev.filter((ticket) => ticket.id !== ticketId));
+        );
+        cachedTickets = next;
+        return next;
+      });
+      setResolvedTickets((prev) => {
+        const next = prev.filter((ticket) => ticket.id !== ticketId);
+        cachedResolvedTickets = next;
+        return next;
+      });
     },
     []
   );
@@ -155,14 +206,20 @@ export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrgan
   const escalateIssue = useCallback(
     async (ticketId: string, reason: string) => {
       await organizationAdminIssueApi.escalate(ticketId, reason);
-      setTickets((prev) =>
-        prev.map((ticket) =>
+      setTickets((prev) => {
+        const next = prev.map((ticket) =>
           ticket.id === ticketId
             ? { ...ticket, status: 'escalated', assignedAdminName: undefined }
             : ticket
-        )
-      );
-      setResolvedTickets((prev) => prev.filter((ticket) => ticket.id !== ticketId));
+        );
+        cachedTickets = next;
+        return next;
+      });
+      setResolvedTickets((prev) => {
+        const next = prev.filter((ticket) => ticket.id !== ticketId);
+        cachedResolvedTickets = next;
+        return next;
+      });
     },
     []
   );

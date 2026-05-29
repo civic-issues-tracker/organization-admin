@@ -17,15 +17,21 @@ interface UnreadCountResponse {
 	unread_count: number;
 }
 
+let cachedNotifications: NotificationItem[] = [];
+let cachedUnreadCount = 0;
+let hasCachedNotifications = false;
+
 export const useNotifications = () => {
-	const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-	const [unreadCount, setUnreadCount] = useState(0);
-	const [isLoading, setIsLoading] = useState(false);
+	const [notifications, setNotifications] = useState<NotificationItem[]>(cachedNotifications);
+	const [unreadCount, setUnreadCount] = useState(cachedUnreadCount);
+	const [isLoading, setIsLoading] = useState(!hasCachedNotifications);
 	const [error, setError] = useState<string | null>(null);
 
 	const fetchUnreadCount = useCallback(async () => {
 		const response = await privateApi.get<UnreadCountResponse>('/notifications/unread/count/');
-		setUnreadCount(response.data.unread_count ?? 0);
+		const nextUnreadCount = response.data.unread_count ?? 0;
+		setUnreadCount(nextUnreadCount);
+		cachedUnreadCount = nextUnreadCount;
 	}, []);
 
 	const fetchNotifications = useCallback(async () => {
@@ -33,10 +39,16 @@ export const useNotifications = () => {
 		setError(null);
 		try {
 			const response = await privateApi.get<NotificationItem[]>('/notifications/');
-			setNotifications(response.data ?? []);
+			const nextNotifications = response.data ?? [];
+			setNotifications(nextNotifications);
+			cachedNotifications = nextNotifications;
+			hasCachedNotifications = true;
 			await fetchUnreadCount();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Failed to load notifications.');
+			cachedNotifications = [];
+			cachedUnreadCount = 0;
+			hasCachedNotifications = false;
 		} finally {
 			setIsLoading(false);
 		}
@@ -45,15 +57,21 @@ export const useNotifications = () => {
 	const markRead = useCallback(async (notificationIds: string[]) => {
 		if (notificationIds.length === 0) return;
 		await privateApi.post('/notifications/mark-read/', { notification_ids: notificationIds });
-		setNotifications((prev) =>
-			prev.map((item) => (notificationIds.includes(item.id) ? { ...item, is_read: true } : item))
-		);
+		setNotifications((prev) => {
+			const next = prev.map((item) => (notificationIds.includes(item.id) ? { ...item, is_read: true } : item));
+			cachedNotifications = next;
+			return next;
+		});
 		await fetchUnreadCount();
 	}, [fetchUnreadCount]);
 
 	const markAllRead = useCallback(async () => {
 		await privateApi.post('/notifications/mark-read/', { read_all: true });
-		setNotifications((prev) => prev.map((item) => ({ ...item, is_read: true })));
+		setNotifications((prev) => {
+			const next = prev.map((item) => ({ ...item, is_read: true }));
+			cachedNotifications = next;
+			return next;
+		});
 		await fetchUnreadCount();
 	}, [fetchUnreadCount]);
 
