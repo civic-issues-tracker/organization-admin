@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOrganizationAdminIssues } from '../hooks/useOrganizationAdminIssues';
+import ThemeLoader from '../../../components/ui/ThemeLoader';
 import { Search, MapPin, ChevronDown, ChevronUp, Image as ImageIcon, Send } from 'lucide-react';
 import { type OrganizationAdminTicket } from '../organizationAdminMockData';
 
@@ -15,7 +16,7 @@ const formatStatusLabel = (status?: OrganizationAdminTicket['status']) => {
 const OrganizationAdminAssignedTicketsPage = () => {
   const { user, showToast } = useAuth();
   const seed = user?.email ?? user?.id ?? user?.full_name;
-  const { tickets, resolvedTickets, updateStatus, updateInternalNotes } = useOrganizationAdminIssues(seed);
+  const { tickets, resolvedTickets, isLoading, updateStatus, updateInternalNotes } = useOrganizationAdminIssues(seed);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -87,6 +88,14 @@ const OrganizationAdminAssignedTicketsPage = () => {
       showToast(err.message || 'Failed to add note', 'error');
     }
   };
+
+  if (isLoading && tickets.length === 0 && resolvedTickets.length === 0) {
+    return (
+      <section className="flex min-h-[60vh] items-center justify-center">
+        <ThemeLoader size="md" />
+      </section>
+    );
+  }
 
   return (
     <section>

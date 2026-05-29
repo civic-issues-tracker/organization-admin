@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
+import ThemeLoader from '../../../components/ui/ThemeLoader';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOrganizationAdminIssues } from '../hooks/useOrganizationAdminIssues';
 
@@ -71,10 +72,8 @@ const OrganizationAdminIssuesPage = () => {
 
 	if (isLoading && tickets.length === 0) {
 		return (
-			<section>
-				<div className="rounded-2xl border border-[#D8CCBD] bg-[#F6F2EC] p-4 text-sm text-[#857060]">
-					Loading map data...
-				</div>
+			<section className="flex min-h-[60vh] items-center justify-center">
+				<ThemeLoader size="md" />
 			</section>
 		);
 	}

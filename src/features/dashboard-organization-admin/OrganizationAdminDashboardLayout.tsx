@@ -47,7 +47,7 @@ const OrganizationAdminDashboardLayout = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F6F2EA]">
+  <div className="flex h-screen overflow-hidden bg-[#F6F2EA]">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <button 
@@ -70,15 +70,15 @@ const OrganizationAdminDashboardLayout = () => {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Desktop Header — centered, self-expanding rounded pill */}
-        <header className="hidden md:grid grid-cols-[1fr_auto_auto] items-center px-6 py-4 z-30 shrink-0 bg-transparent">
+        <header className="hidden md:grid grid-cols-[1fr_auto_auto] items-center gap-x-8 border-b border-[#E2D6C8] px-6 py-4 z-30 shrink-0 bg-transparent">
           <div />
-          <div className="inline-flex max-w-[75%] translate-x-6 items-center gap-4 rounded-full border border-[#E0D3C4] bg-white px-6 py-3 shadow-sm">
+          <div className="inline-flex min-w-md max-w-160 items-center gap-4 rounded-full border border-[#E0D3C4] bg-white px-6 py-3 shadow-sm">
             <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-[#6E4B33]/10 text-[#6E4B33]">
               <Building2 size={20} />
             </div>
             <div className="min-w-0 text-left">
-              <h1 className="text-base font-black leading-tight text-[#3E2B1F] truncate">{currentOrgName}</h1>
-              <p className="text-[11px] font-bold text-[#9A8070] mt-0.5 truncate uppercase tracking-wider">{pageName}</p>
+              <h1 className="text-base font-black leading-tight text-[#3E2B1F] whitespace-normal wrap-break-word">{currentOrgName}</h1>
+              <p className="text-[11px] font-bold text-[#9A8070] mt-0.5 uppercase tracking-wider">{pageName}</p>
             </div>
           </div>
           <div ref={desktopProfileRef} className="relative justify-self-end">
@@ -124,7 +124,7 @@ const OrganizationAdminDashboardLayout = () => {
         </header>
 
         {/* Mobile Header — hamburger left, org pill centered */}
-        <header className="md:hidden flex items-center justify-between px-4 py-3 z-30 shrink-0 bg-transparent">
+        <header className="md:hidden flex items-center justify-between border-b border-[#E2D6C8] px-4 py-3 z-30 shrink-0 bg-transparent">
           <button
             onClick={() => setSidebarOpen(true)}
             className="shrink-0 p-1.5 text-[#6E4B33] hover:bg-white/50 rounded-lg transition"
@@ -138,8 +138,8 @@ const OrganizationAdminDashboardLayout = () => {
               <Building2 size={16} />
             </div>
             <div className="min-w-0 text-left flex-1">
-              <p className="text-sm font-bold text-[#3E2B1F] leading-tight truncate">{currentOrgName}</p>
-              <p className="text-[10px] font-bold text-[#9A8070] mt-0.5 truncate uppercase tracking-wider">{pageName}</p>
+              <p className="text-sm font-bold text-[#3E2B1F] leading-tight wrap-break-word">{currentOrgName}</p>
+              <p className="text-[10px] font-bold text-[#9A8070] mt-0.5 uppercase tracking-wider">{pageName}</p>
             </div>
           </div>
           <div ref={mobileProfileRef} className="relative shrink-0">

@@ -23,7 +23,7 @@ const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
     <aside className="flex h-screen w-64 shrink-0 flex-col overflow-y-auto rounded-r-4xl md:rounded-r-[4rem] bg-[#6E4B33] py-8 text-[#F6EEE3] shadow-xl">
       <div className="mb-8 px-8 border-b border-white/10 pb-4 flex justify-between items-start">
         <div>
-          <h1 className="text-[32px] font-extrabold leading-none tracking-tight">CivicWorks</h1>
+          <h1 className="whitespace-nowrap text-[28px] font-extrabold leading-none tracking-tight">CivicWorks</h1>
           <p className="text-xs text-[#E9D6C0] mt-1">Admin Portal</p>
         </div>
         {onClose && (

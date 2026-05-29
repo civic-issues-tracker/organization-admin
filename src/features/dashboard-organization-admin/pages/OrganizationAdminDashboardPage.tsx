@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, MapPin, MoreHorizontal, MoreVertical, Search, Send, TriangleAlert } from 'lucide-react';
+import ThemeLoader from '../../../components/ui/ThemeLoader';
 import { type OrganizationAdminTicket } from '../organizationAdminMockData';
 import { useOrganizationAdminIssues } from '../hooks/useOrganizationAdminIssues';
 import { useAuth } from '../../../hooks/useAuth';
@@ -68,11 +68,9 @@ const OrganizationAdminDashboardPage = () => {
 	const [searchQuery, setSearchQuery] = useState('');
 	const { tickets, resolvedTickets, isLoading, error, updateStatus, updateInternalNotes, releaseIssue, escalateIssue } = useOrganizationAdminIssues(seed);
 	const [showResolved, setShowResolved] = useState(false);
+	const [showAllActiveTickets, setShowAllActiveTickets] = useState(false);
 	const [statusModal, setStatusModal] = useState<StatusModalState | null>(null);
-	// role_name from backend is 'organization_admin' — use full_name as the org name
-	const orgName = user?.full_name ||
-		((user as any)?.role_name === 'organization_admin' ? user?.full_name : null) ||
-		'Your Organization';
+	const orgName = user?.organization_name ?? user?.full_name ?? 'Your Organization';
 
 	// All tickets (active + resolved) for selection lookup
 	const allTickets = useMemo(() => [...tickets, ...resolvedTickets], [tickets, resolvedTickets]);
@@ -136,6 +134,10 @@ const OrganizationAdminDashboardPage = () => {
 			(t.summary ?? '').toLowerCase().includes(q)
 		);
 	});
+	const activeTicketPreviewLimit = 6;
+	const visibleActiveTickets = showAllActiveTickets
+		? filteredTickets
+		: filteredTickets.slice(0, activeTicketPreviewLimit);
 	const location = useLocation();
 	const [selectedId, setSelectedId] = useState(() => location.state?.selectedId ?? tickets[0]?.id ?? '');
 	const [note, setNote] = useState('');
@@ -283,10 +285,8 @@ const OrganizationAdminDashboardPage = () => {
 
 	if (isLoading && tickets.length === 0) {
 		return (
-			<section>
-				<div className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-6 text-sm text-[#857060]">
-					Loading organization issues...
-				</div>
+			<section className="flex min-h-[60vh] items-center justify-center">
+				<ThemeLoader size="md" />
 			</section>
 		);
 	}
@@ -365,7 +365,7 @@ const OrganizationAdminDashboardPage = () => {
 							</div>
 						</div>
 						<div className="space-y-2">
-							{filteredTickets.map((ticket) => (
+							{visibleActiveTickets.map((ticket) => (
 								<button
 									type="button"
 									key={ticket.id}
@@ -406,6 +406,17 @@ const OrganizationAdminDashboardPage = () => {
 								</button>
 							))}
 						</div>
+						{filteredTickets.length > activeTicketPreviewLimit && (
+							<div className="mt-3 flex justify-center">
+								<button
+									type="button"
+									onClick={() => setShowAllActiveTickets((prev) => !prev)}
+									className="rounded-full border border-[#D8C7B4] bg-white px-4 py-1.5 text-xs font-semibold text-[#6B4C33] transition hover:border-[#C9A78A] hover:bg-[#FCF8F3]"
+								>
+									{showAllActiveTickets ? 'Show fewer active tickets' : `Show all active tickets (${filteredTickets.length - activeTicketPreviewLimit} more)`}
+								</button>
+							</div>
+						)}
 
 						{/* ── Resolved tickets — collapsible so admin can reopen them ── */}
 						{resolvedTickets.length > 0 && (

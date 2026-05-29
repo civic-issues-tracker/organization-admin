@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Bell, MoreHorizontal, Search, TriangleAlert, X } from 'lucide-react';
+import ThemeLoader from '../../../components/ui/ThemeLoader';
 import { useNotifications, type NotificationItem } from '../../../hooks/useNotifications';
 
 const getNotificationLevel = (type: string) => {
@@ -48,8 +49,8 @@ const OrganizationAdminAlertsPage = () => {
 	const listContent = (() => {
 		if (isLoading) {
 			return (
-				<div className="rounded-xl border border-dashed border-[#DDD0C2] bg-white p-4 text-sm text-[#7D6958]">
-					Loading notifications...
+				<div className="flex min-h-[35vh] items-center justify-center rounded-xl border border-dashed border-[#DDD0C2] bg-white p-4">
+					<ThemeLoader size="sm" />
 				</div>
 			);
 		}

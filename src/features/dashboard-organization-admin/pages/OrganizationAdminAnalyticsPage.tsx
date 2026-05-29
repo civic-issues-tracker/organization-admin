@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
+import ThemeLoader from '../../../components/ui/ThemeLoader';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOrganizationAdminIssues } from '../hooks/useOrganizationAdminIssues';
 
@@ -29,7 +30,7 @@ const OrganizationAdminAnalyticsPage = () => {
 		});
 		const avgTimeDays = ticketsWithTime > 0 
 			? (totalResolveTimeMs / ticketsWithTime / (1000 * 60 * 60 * 24)).toFixed(1) + 'd'
-			: 'N/A';
+			: '0.0d';
 
 		return [
 			{ label: 'Total Resolved', value: resolvedTickets.length.toString() },
@@ -58,10 +59,8 @@ const OrganizationAdminAnalyticsPage = () => {
 
 	if (isLoading && resolvedTickets.length === 0) {
 		return (
-			<section>
-				<div className="rounded-2xl border border-[#D8CCBD] bg-[#F6F2EC] p-4 text-sm text-[#857060]">
-					Loading resolved issues...
-				</div>
+			<section className="flex min-h-[60vh] items-center justify-center">
+				<ThemeLoader size="md" />
 			</section>
 		);
 	}
