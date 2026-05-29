@@ -49,7 +49,6 @@ const LoginForm: React.FC = () => {
     
     if (forgotMethod === 'email' && !forgotIdentifier.includes('@')) {
       showToast("Please enter a valid email address.", "error");
-  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     }
     if (forgotMethod === 'sms' && forgotIdentifier.length < 9) {
       showToast("Please enter a valid phone number.", "error");

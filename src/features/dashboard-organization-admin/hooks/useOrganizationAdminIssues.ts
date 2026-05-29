@@ -186,7 +186,7 @@ export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrgan
     async (ticketId: string, note?: string) => {
       await organizationAdminIssueApi.release(ticketId, note);
       setTickets((prev) => {
-        const next = prev.map((ticket) =>
+        const next: OrganizationAdminTicket[] = prev.map((ticket) =>
           ticket.id === ticketId
             ? { ...ticket, status: 'submitted', assignedAdminName: undefined }
             : ticket
@@ -207,7 +207,7 @@ export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrgan
     async (ticketId: string, reason: string) => {
       await organizationAdminIssueApi.escalate(ticketId, reason);
       setTickets((prev) => {
-        const next = prev.map((ticket) =>
+        const next: OrganizationAdminTicket[] = prev.map((ticket) =>
           ticket.id === ticketId
             ? { ...ticket, status: 'escalated', assignedAdminName: undefined }
             : ticket
