@@ -1,5 +1,6 @@
-import React, { createContext, useState, useCallback, useLayoutEffect, useRef, useMemo } from 'react';
+import React, { createContext, useState, useCallback, useLayoutEffect, useRef, useMemo, useEffect } from 'react';
 import { privateApi } from '../features/auth/services/authService';
+import { authService } from '../features/auth/services/authService';
 import Toast, { type ToastType } from '../components/ui/Toast'; 
 import { AxiosError, type InternalAxiosRequestConfig, type AxiosResponse } from 'axios';
 
@@ -110,6 +111,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoggingOut.current = false;
   }
 }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const hydrateOrganizationName = async () => {
+      if (!user || user.role_name !== 'organization_admin' || user.organization_name || !user.email) {
+        return;
+      }
+
+      try {
+        const org = await authService.getUserOrganization(user.email);
+        const organizationName = org?.name?.trim();
+        if (!isMounted || !organizationName) return;
+
+        const updatedUser = { ...user, organization_name: organizationName };
+        setUser(updatedUser);
+        sessionStorage.setItem('user', JSON.stringify(updatedUser));
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      } catch (error) {
+        console.warn('Failed to hydrate organization name for auth user', error);
+      }
+    };
+
+    void hydrateOrganizationName();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   // Interceptors for API logic
   useLayoutEffect(() => {

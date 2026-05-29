@@ -104,6 +104,22 @@ const LoginForm: React.FC = () => {
           user: result.user
         });
 
+        if (isOrganizationAdminRole(role) && result.user.email) {
+          void authService.getUserOrganization(result.user.email)
+            .then((org) => {
+              if (!org?.name) return;
+              const updatedUser = { ...result.user, organization_name: org.name };
+              login({
+                access: result.access,
+                refresh: result.refresh,
+                user: updatedUser,
+              });
+            })
+            .catch((err) => {
+              console.error('Failed to fetch organization profile:', err);
+            });
+        }
+
         showToast("Login successful!", "success");
 
         if (isOrganizationAdminRole(role)) {
