@@ -1,4 +1,4 @@
-import React, { createContext, useState, useCallback, useLayoutEffect, useRef } from 'react';
+import React, { createContext, useState, useCallback, useLayoutEffect, useRef, useMemo } from 'react';
 import { privateApi } from '../features/auth/services/authService';
 import Toast, { type ToastType } from '../components/ui/Toast'; 
 import { AxiosError, type InternalAxiosRequestConfig, type AxiosResponse } from 'axios';
@@ -103,6 +103,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+
+    setToast({ show: true, msg: 'Logged out successfully.', type: 'success' });
+    setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 4000);
     
     isLoggingOut.current = false;
   }
@@ -135,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await logout();
         }
 
-        return Promise.reject(error);
+        throw error;
       }
     );
 
@@ -145,17 +148,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [logout]); 
 
+  const contextValue = useMemo(() => ({
+    user,
+    accessToken,
+    isAuthenticated: !!accessToken,
+    isLoading,
+    login,
+    logout,
+    updateToken,
+    showToast,
+  }), [user, accessToken, isLoading, login, logout, updateToken, showToast]);
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      accessToken, 
-      isAuthenticated: !!accessToken, 
-      isLoading, 
-      login, 
-      logout,
-      updateToken,
-      showToast
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
       <Toast 
         isVisible={toast.show} 

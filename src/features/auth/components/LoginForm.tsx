@@ -49,7 +49,7 @@ const LoginForm: React.FC = () => {
     
     if (forgotMethod === 'email' && !forgotIdentifier.includes('@')) {
       showToast("Please enter a valid email address.", "error");
-      return;
+  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     }
     if (forgotMethod === 'sms' && forgotIdentifier.length < 9) {
       showToast("Please enter a valid phone number.", "error");
@@ -104,23 +104,6 @@ const LoginForm: React.FC = () => {
           refresh: result.refresh,
           user: result.user
         });
-
-        // Add extra call to fetch organization name
-        if (result.user.email && isOrganizationAdminRole(role)) {
-          try {
-            const org = await authService.getUserOrganization(result.user.email);
-            if (org && org.name) {
-              const updatedUser = { ...result.user, organization_name: org.name };
-              login({
-                access: result.access,
-                refresh: result.refresh,
-                user: updatedUser
-              });
-            }
-          } catch (err) {
-            console.error('Failed to fetch org profile:', err);
-          }
-        }
 
         showToast("Login successful!", "success");
 
