@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-import { ChevronDown, Menu, Building2, LogOut } from 'lucide-react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Bell, ChevronDown, Menu, Building2, LogOut } from 'lucide-react';
 import SidebarOrganizationAdmin from '../../components/layout/SidebarOrganizationAdmin';
 import { useAuth } from '../../hooks/useAuth';
+import { useNotifications } from '../../hooks/useNotifications';
+import { useOrganizationAdminIssues } from './hooks/useOrganizationAdminIssues';
 
 const OrganizationAdminDashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
+  const { tickets, resolvedTickets } = useOrganizationAdminIssues(user?.email ?? user?.id ?? user?.full_name);
   const location = useLocation();
+  const navigate = useNavigate();
   const desktopProfileRef = useRef<HTMLDivElement | null>(null);
   const mobileProfileRef = useRef<HTMLDivElement | null>(null);
 
@@ -21,6 +26,26 @@ const OrganizationAdminDashboardLayout = () => {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+
+  const queueCount = useMemo(() => {
+    const currentAdminId = user?.id ?? '';
+    const currentEmail = (user?.email || '').trim().toLowerCase();
+    const currentFullName = (user?.full_name || '').trim().toLowerCase();
+    const allTickets = tickets.concat(resolvedTickets);
+
+    return allTickets.filter((ticket) => {
+      if (ticket.status === 'resolved') return false;
+      if (ticket.assignedAdminId && currentAdminId) {
+        return ticket.assignedAdminId === currentAdminId;
+      }
+      const assignedLower = (ticket.assignedAdminName || '').trim().toLowerCase();
+      if (!assignedLower) return false;
+      return (
+        (currentEmail.length > 0 && assignedLower.includes(currentEmail)) ||
+        (currentFullName.length > 0 && assignedLower.includes(currentFullName))
+      );
+    }).length;
+  }, [resolvedTickets, tickets, user?.email, user?.full_name, user?.id]);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -41,10 +66,27 @@ const OrganizationAdminDashboardLayout = () => {
     if (path.includes('/queue')) return 'My Queue';
     if (path.includes('/map')) return 'Service Area';
     if (path.includes('/resolved')) return 'Performance & Analytics';
-    if (path.includes('/alerts')) return 'Alerts';
+    if (path.includes('/notifications')) return 'Notifications';
     if (path.includes('/assigned')) return 'Assigned Tickets';
     return 'Organization Dashboard';
   }, [location.pathname]);
+
+  const notificationsButton = (
+    <button
+      type="button"
+      onClick={() => navigate('/dashboard/notifications')}
+      className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#E0D3C4] bg-white shadow-sm transition hover:border-[#C9A78A]"
+      title="Open notifications"
+      aria-label={unreadCount > 0 ? `Open notifications, ${unreadCount} unread` : 'Open notifications'}
+    >
+      <Bell size={16} className="text-[#8B7767]" />
+      {unreadCount > 0 ? (
+        <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-[#EE3E4A] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-md">
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </span>
+      ) : null}
+    </button>
+  );
 
   return (
   <div className="flex h-screen overflow-hidden bg-[#F6F2EA]">
@@ -64,13 +106,13 @@ const OrganizationAdminDashboardLayout = () => {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <SidebarOrganizationAdmin onClose={() => setSidebarOpen(false)} />
+        <SidebarOrganizationAdmin onClose={() => setSidebarOpen(false)} queueCount={queueCount} />
       </div>
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Desktop Header — centered, self-expanding rounded pill */}
-        <header className="hidden md:grid grid-cols-[1fr_auto_auto] items-center gap-x-8 border-b border-[#E2D6C8] px-6 py-4 z-30 shrink-0 bg-transparent">
+        <header className="hidden md:grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-4 border-b border-[#E2D6C8] px-6 py-4 z-30 shrink-0 bg-transparent">
           <div />
           <div className="inline-flex min-w-md max-w-160 items-center gap-4 rounded-full border border-[#E0D3C4] bg-white px-6 py-3 shadow-sm">
             <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-[#6E4B33]/10 text-[#6E4B33]">
@@ -81,6 +123,7 @@ const OrganizationAdminDashboardLayout = () => {
               <p className="text-[11px] font-bold text-[#9A8070] mt-0.5 uppercase tracking-wider">{pageName}</p>
             </div>
           </div>
+          <div className="justify-self-end">{notificationsButton}</div>
           <div ref={desktopProfileRef} className="relative justify-self-end">
             <button
               type="button"
@@ -124,7 +167,7 @@ const OrganizationAdminDashboardLayout = () => {
         </header>
 
         {/* Mobile Header — hamburger left, org pill centered */}
-        <header className="md:hidden flex items-center justify-between border-b border-[#E2D6C8] px-4 py-3 z-30 shrink-0 bg-transparent">
+        <header className="md:hidden flex items-center gap-2 border-b border-[#E2D6C8] px-4 py-3 z-30 shrink-0 bg-transparent">
           <button
             onClick={() => setSidebarOpen(true)}
             className="shrink-0 p-1.5 text-[#6E4B33] hover:bg-white/50 rounded-lg transition"
@@ -133,7 +176,7 @@ const OrganizationAdminDashboardLayout = () => {
           >
             <Menu size={22} />
           </button>
-          <div className="inline-flex items-center gap-3 rounded-full border border-[#E0D3C4] bg-white px-4 py-2 mx-2 min-w-0 flex-1 shadow-sm">
+          <div className="inline-flex min-w-0 flex-1 items-center gap-3 rounded-full border border-[#E0D3C4] bg-white px-4 py-2 shadow-sm">
             <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-[#6E4B33]/10 text-[#6E4B33]">
               <Building2 size={16} />
             </div>
@@ -142,6 +185,7 @@ const OrganizationAdminDashboardLayout = () => {
               <p className="text-[10px] font-bold text-[#9A8070] mt-0.5 uppercase tracking-wider">{pageName}</p>
             </div>
           </div>
+          {notificationsButton}
           <div ref={mobileProfileRef} className="relative shrink-0">
             <button
               type="button"

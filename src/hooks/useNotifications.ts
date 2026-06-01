@@ -10,22 +10,39 @@ export interface NotificationItem {
 	created_at: string;
 	issue?: string | null;
 	issue_number?: string | null;
-	metadata?: Record<string, unknown>;
 }
 
 interface UnreadCountResponse {
 	unread_count: number;
 }
 
+interface UseNotificationsOptions {
+	refreshIntervalMs?: number;
+	refreshOnFocus?: boolean;
+}
+
+const NOTIFICATION_SYNC_EVENT = 'organization-admin-notifications-updated';
+
 let cachedNotifications: NotificationItem[] = [];
 let cachedUnreadCount = 0;
 let hasCachedNotifications = false;
 
-export const useNotifications = () => {
+export const useNotifications = (options: UseNotificationsOptions = {}) => {
+	const { refreshIntervalMs = 30000, refreshOnFocus = true } = options;
 	const [notifications, setNotifications] = useState<NotificationItem[]>(cachedNotifications);
 	const [unreadCount, setUnreadCount] = useState(cachedUnreadCount);
 	const [isLoading, setIsLoading] = useState(!hasCachedNotifications);
 	const [error, setError] = useState<string | null>(null);
+
+	const syncFromCache = useCallback(() => {
+		setNotifications(cachedNotifications);
+		setUnreadCount(cachedUnreadCount);
+		setIsLoading(false);
+	}, []);
+
+	const emitSync = useCallback(() => {
+		globalThis.dispatchEvent(new Event(NOTIFICATION_SYNC_EVENT));
+	}, []);
 
 	const fetchUnreadCount = useCallback(async () => {
 		const response = await privateApi.get<UnreadCountResponse>('/notifications/unread/count/');
@@ -44,6 +61,7 @@ export const useNotifications = () => {
 			cachedNotifications = nextNotifications;
 			hasCachedNotifications = true;
 			await fetchUnreadCount();
+			emitSync();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Failed to load notifications.');
 			cachedNotifications = [];
@@ -63,6 +81,7 @@ export const useNotifications = () => {
 			return next;
 		});
 		await fetchUnreadCount();
+		emitSync();
 	}, [fetchUnreadCount]);
 
 	const markAllRead = useCallback(async () => {
@@ -73,11 +92,49 @@ export const useNotifications = () => {
 			return next;
 		});
 		await fetchUnreadCount();
+		emitSync();
 	}, [fetchUnreadCount]);
 
 	useEffect(() => {
 		fetchNotifications();
 	}, [fetchNotifications]);
+
+	useEffect(() => {
+		globalThis.addEventListener(NOTIFICATION_SYNC_EVENT, syncFromCache);
+		return () => globalThis.removeEventListener(NOTIFICATION_SYNC_EVENT, syncFromCache);
+	}, [syncFromCache]);
+
+	useEffect(() => {
+		if (!refreshOnFocus) return;
+
+		const handleFocus = () => {
+			void fetchNotifications();
+		};
+
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === 'visible') {
+				void fetchNotifications();
+			}
+		};
+
+		globalThis.addEventListener('focus', handleFocus);
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		return () => {
+			globalThis.removeEventListener('focus', handleFocus);
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, [fetchNotifications, refreshOnFocus]);
+
+	useEffect(() => {
+		if (refreshIntervalMs <= 0) return;
+
+		const intervalId = globalThis.setInterval(() => {
+			void fetchNotifications();
+		}, refreshIntervalMs);
+
+		return () => globalThis.clearInterval(intervalId);
+	}, [fetchNotifications, refreshIntervalMs]);
 
 	return {
 		notifications,

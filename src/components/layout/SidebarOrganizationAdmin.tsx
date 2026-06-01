@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom';
 import {
-  Bell,
   CheckSquare,
   ClipboardList,
   Map,
@@ -9,11 +8,12 @@ import {
 
 interface SidebarProps {
   onClose?: () => void;
+  queueCount?: number;
 }
 
-const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
+const SidebarOrganizationAdmin = ({ onClose, queueCount }: SidebarProps) => {
   const navItems = [
-    { label: 'My Queue', to: '/dashboard/queue', icon: ClipboardList, badge: 2 },
+    { label: 'My Queue', to: '/dashboard/queue', icon: ClipboardList, badge: queueCount },
     { label: 'Assigned Tickets', to: '/dashboard/assigned', icon: ClipboardList },
     { label: 'Service Area', to: '/dashboard/map', icon: Map },
     { label: 'Resolved Tickets', to: '/dashboard/resolved', icon: CheckSquare },
@@ -50,7 +50,7 @@ const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
                 <Icon size={14} />
                 {item.label}
               </span>
-              {item.badge ? (
+              {typeof item.badge === 'number' && item.badge > 0 ? (
                 <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#EE3E4A] px-1 text-[10px] font-bold">
                   {item.badge}
                 </span>
@@ -60,19 +60,6 @@ const SidebarOrganizationAdmin = ({ onClose }: SidebarProps) => {
         })}
       </nav>
 
-      <div className="space-y-1 px-4 pb-3 mt-auto">
-        <NavLink
-          to="/dashboard/notifications"
-          className={({ isActive }) =>
-            `flex w-full items-center gap-2 rounded-lg px-4 py-3 text-sm transition ${
-              isActive ? 'bg-white/10 text-white font-semibold' : 'text-[#EFDCC6] hover:bg-[#5D3F2C]/70'
-            }`
-          }
-        >
-          <Bell size={14} />
-          Notifications
-        </NavLink>
-      </div>
     </aside>
   );
 };

@@ -19,7 +19,7 @@ const formatTimestamp = (value: string) => {
 
 
 const OrganizationAdminAlertsPage = () => {
-	const { notifications, isLoading, error, markRead, markAllRead } = useNotifications();
+	const { notifications, isLoading, error, markRead, markAllRead } = useNotifications({ refreshIntervalMs: 0, refreshOnFocus: true });
 	const [searchQuery, setSearchQuery] = useState('');
 	const [levelFilter, setLevelFilter] = useState<'all' | 'critical' | 'warning' | 'info'>('all');
 	const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
