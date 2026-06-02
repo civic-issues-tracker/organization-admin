@@ -22,6 +22,14 @@ export const organizationAdminIssueApi = {
     });
     return response.data as Partial<OrganizationAdminIssue>;
   },
+  updatePriority: async (id: string, priority: string): Promise<Partial<OrganizationAdminIssue>> => {
+    const formData = new FormData();
+    formData.append('priority', priority);
+    const response = await privateApi.patch(`/issues/${id}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as Partial<OrganizationAdminIssue>;
+  },
   release: async (id: string, note?: string): Promise<{ status: string; message?: string }> => {
     const formData = new FormData();
     if (note) {

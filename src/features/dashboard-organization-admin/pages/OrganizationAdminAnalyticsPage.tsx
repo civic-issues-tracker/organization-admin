@@ -13,12 +13,43 @@ const OrganizationAdminAnalyticsPage = () => {
 	const [reportFilter, setReportFilter] = useState('');
 	const [showFilterInput, setShowFilterInput] = useState(false);
 
+	const currentEmail = (user?.email || '').trim().toLowerCase();
+	const currentFullName = (user?.full_name || '').trim().toLowerCase();
+
+	const myTickets = useMemo(() => {
+		return tickets.filter((t) => {
+			const assignedName = t.assignedAdminName?.trim() || '';
+			const assignedLower = assignedName.toLowerCase();
+			return (
+				assignedName.length > 0 &&
+				(
+					(currentEmail.length > 0 && assignedLower.includes(currentEmail)) ||
+					(currentFullName.length > 0 && assignedLower.includes(currentFullName))
+				)
+			);
+		});
+	}, [tickets, currentEmail, currentFullName]);
+
+	const myResolvedTickets = useMemo(() => {
+		return resolvedTickets.filter((t) => {
+			const assignedName = t.assignedAdminName?.trim() || '';
+			const assignedLower = assignedName.toLowerCase();
+			return (
+				assignedName.length > 0 &&
+				(
+					(currentEmail.length > 0 && assignedLower.includes(currentEmail)) ||
+					(currentFullName.length > 0 && assignedLower.includes(currentFullName))
+				)
+			);
+		});
+	}, [resolvedTickets, currentEmail, currentFullName]);
+
 	const kpis = useMemo(() => {
-		const highPriority = tickets.filter(t => t.priority === 'High').length;
+		const highPriority = myTickets.filter(t => t.priority === 'High').length;
 		
 		let totalResolveTimeMs = 0;
 		let ticketsWithTime = 0;
-		resolvedTickets.forEach(t => {
+		myResolvedTickets.forEach(t => {
 			if (t.createdAt && t.resolutionDate) {
 				const start = new Date(t.createdAt).getTime();
 				const end = new Date(t.resolutionDate).getTime();
@@ -33,16 +64,17 @@ const OrganizationAdminAnalyticsPage = () => {
 			: '0.0d';
 
 		return [
-			{ label: 'Total Resolved', value: resolvedTickets.length.toString() },
+			{ label: 'Total Resolved', value: myResolvedTickets.length.toString() },
 			{ label: 'Avg Resolve Time', value: avgTimeDays },
-			{ label: 'Active Issues', value: tickets.length.toString() },
+			{ label: 'Active Issues', value: myTickets.length.toString() },
 			{ label: 'High Priority (Active)', value: highPriority.toString() },
 		];
-	}, [tickets, resolvedTickets]);
+	}, [myTickets, myResolvedTickets]);
+
 	const filteredReports = useMemo(() => {
 		const q = `${searchQuery} ${reportFilter}`.trim().toLowerCase();
-		if (!q) return resolvedTickets;
-		return resolvedTickets.filter((ticket) => {
+		if (!q) return myResolvedTickets;
+		return myResolvedTickets.filter((ticket) => {
 			return (
 				ticket.issueNumber.toLowerCase().includes(q) ||
 				(ticket.title ?? "").toLowerCase().includes(q) ||
@@ -52,12 +84,13 @@ const OrganizationAdminAnalyticsPage = () => {
 				(ticket.resolutionDate ?? '').toLowerCase().includes(q)
 			);
 		});
-	}, [reportFilter, searchQuery, resolvedTickets]);
+	}, [reportFilter, searchQuery, myResolvedTickets]);
+
 	const activeReport = activeReportId
-		? filteredReports.find((ticket) => ticket.id === activeReportId) ?? resolvedTickets.find((ticket) => ticket.id === activeReportId) ?? null
+		? filteredReports.find((ticket) => ticket.id === activeReportId) ?? myResolvedTickets.find((ticket) => ticket.id === activeReportId) ?? null
 		: null;
 
-	if (isLoading && resolvedTickets.length === 0) {
+	if (isLoading && myResolvedTickets.length === 0) {
 		return (
 			<section className="flex min-h-[60vh] items-center justify-center">
 				<ThemeLoader size="md" />

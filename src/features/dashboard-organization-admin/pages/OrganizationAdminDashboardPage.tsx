@@ -66,11 +66,16 @@ const OrganizationAdminDashboardPage = () => {
 	const navigate = useNavigate();
 	const seed = user?.email ?? user?.id ?? user?.full_name;
 	const [searchQuery, setSearchQuery] = useState('');
-	const { tickets, resolvedTickets, isLoading, error, updateStatus, updateInternalNotes, releaseIssue, escalateIssue } = useOrganizationAdminIssues(seed);
+	const { tickets, resolvedTickets, isLoading, error, updateStatus, updateInternalNotes, releaseIssue, escalateIssue, updatePriority } = useOrganizationAdminIssues();
 	const [showResolved, setShowResolved] = useState(false);
 	const [showAllActiveTickets, setShowAllActiveTickets] = useState(false);
 	const [statusModal, setStatusModal] = useState<StatusModalState | null>(null);
 	const orgName = user?.organization_name ?? user?.full_name ?? 'Your Organization';
+
+	// The backend returns assigned_admin_name as User.__str__() → "Full Name (email@example.com)"
+	// We must check if the current user's email OR full_name appears in that string.
+	const currentEmail = (user?.email || '').trim().toLowerCase();
+	const currentFullName = (user?.full_name || '').trim().toLowerCase();
 
 	// All tickets (active + resolved) for selection lookup
 	const allTickets = useMemo(() => [...tickets, ...resolvedTickets], [tickets, resolvedTickets]);
@@ -99,8 +104,21 @@ const OrganizationAdminDashboardPage = () => {
 			};
 		});
 
+		// Only count tickets that are assigned to the currently logged-in admin
+		const myTickets = allTickets.filter((ticket) => {
+			const assignedName = ticket.assignedAdminName?.trim() || '';
+			const assignedLower = assignedName.toLowerCase();
+			return (
+				assignedName.length > 0 &&
+				(
+					(currentEmail.length > 0 && assignedLower.includes(currentEmail)) ||
+					(currentFullName.length > 0 && assignedLower.includes(currentFullName))
+				)
+			);
+		});
+
 		// Count any ticket updated or created in those 7 days
-		allTickets.forEach((ticket) => {
+		myTickets.forEach((ticket) => {
 			// fallback to a recent date if none is found to avoid breaking
 			const d = new Date(ticket.resolutionDate || ticket.createdAt || new Date());
 			const ticketDateStr = d.toDateString();
@@ -122,7 +140,7 @@ const OrganizationAdminDashboardPage = () => {
 				heightCode: heightPx,
 			};
 		});
-	}, [allTickets]);
+	}, [allTickets, currentEmail, currentFullName]);
 
 	const filteredTickets = tickets.filter((t) => {
 		const q = searchQuery.trim().toLowerCase();
@@ -152,10 +170,6 @@ const OrganizationAdminDashboardPage = () => {
 	const statusModalHeading = statusModal ? getStatusModalHeading(statusModal.mode) : '';
 	const statusModalFieldLabel = statusModal ? getStatusModalFieldLabel(statusModal.mode) : '';
 	const statusModalPlaceholder = statusModal ? getStatusModalPlaceholder(statusModal.mode) : '';
-	// The backend returns assigned_admin_name as User.__str__() → "Full Name (email@example.com)"
-	// We must check if the current user's email OR full_name appears in that string.
-	const currentEmail = (user?.email || '').trim().toLowerCase();
-	const currentFullName = (user?.full_name || '').trim().toLowerCase();
 	const assignedLower = assignedAdminName.toLowerCase();
 	const isAssignedToCurrentUser =
 		assignedAdminName.length > 0 &&
@@ -281,6 +295,21 @@ const OrganizationAdminDashboardPage = () => {
 			return;
 		}
 		openStatusModal('escalate', 'escalated');
+	};
+
+	const handlePriorityChange = async (newPriority: string) => {
+		if (!selected) return;
+		if (isLockedByOther) {
+			showToast(`This issue is locked by ${assignedAdminName}.`, 'error');
+			return;
+		}
+		try {
+			await updatePriority(selected.id, newPriority);
+			showToast(`Priority updated to ${newPriority}.`, 'success');
+		} catch (err) {
+			console.error('Failed to update priority', err);
+			showToast('Failed to update priority.', 'error');
+		}
 	};
 
 	if (isLoading && tickets.length === 0) {
@@ -478,6 +507,16 @@ const OrganizationAdminDashboardPage = () => {
 							<span className="rounded-full bg-[#E9E7E2] px-2 py-0.5 text-[11px] font-semibold text-[#617083]">{selected?.category ?? 'Uncategorized'}</span>
 						</div>
 						<div className="flex items-center gap-2 text-sm text-[#8E7E6D]">
+							<select
+								value={selected?.priority || 'Low'}
+								onChange={(e) => handlePriorityChange(e.target.value)}
+								disabled={isLockedByOther}
+								className={`rounded-full border px-2 py-1 outline-none text-xs font-semibold ${priorityTone[selected?.priority || 'Low']} border-[#E0D3C5] bg-transparent disabled:opacity-50`}
+							>
+								<option value="Low" className="text-[#2E8D56]">Low Priority</option>
+								<option value="Medium" className="text-[#AF7A1E]">Medium Priority</option>
+								<option value="High" className="text-[#C03E3E]">High Priority</option>
+							</select>
 							<button onClick={cycleStatus} className="rounded-full border border-[#E0D3C5] px-2 py-1" disabled={isLockedByOther}>
 								Status: {statusLabel}
 							</button>

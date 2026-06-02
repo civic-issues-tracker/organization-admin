@@ -22,6 +22,7 @@ interface UseOrganizationAdminIssuesResult {
   assignUnit: (ticketId: string, unit: string) => void;
   releaseIssue: (ticketId: string, note?: string) => Promise<void>;
   escalateIssue: (ticketId: string, reason: string) => Promise<void>;
+  updatePriority: (ticketId: string, priority: string) => Promise<void>;
 }
 
 const isResolvedStatus = (status: OrganizationAdminTicket['status']) => status === 'resolved';
@@ -32,7 +33,7 @@ const splitResolved = (tickets: OrganizationAdminTicket[]) => {
   return { active, resolved };
 };
 
-export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrganizationAdminIssuesResult => {
+export const useOrganizationAdminIssues = (): UseOrganizationAdminIssuesResult => {
   const [tickets, setTickets] = useState<OrganizationAdminTicket[]>(cachedTickets);
   const [resolvedTickets, setResolvedTickets] = useState<OrganizationAdminTicket[]>(cachedResolvedTickets);
   const [isLoading, setIsLoading] = useState(!hasCachedIssues);
@@ -182,6 +183,45 @@ export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrgan
     []
   );
 
+  const updatePriority = useCallback(
+    async (ticketId: string, priority: string) => {
+      try {
+        const updated = await organizationAdminIssueApi.updatePriority(ticketId, priority);
+        const hasFullPayload = Boolean(updated && 'issue_number' in updated);
+        const updatedTicket = hasFullPayload
+          ? toOrganizationAdminTicket(updated as OrganizationAdminIssue)
+          : null;
+        if (updatedTicket) {
+          setTickets((prev) => {
+            const next = prev.map((ticket) => (ticket.id === ticketId ? updatedTicket : ticket));
+            cachedTickets = next;
+            return next;
+          });
+          setResolvedTickets((prev) => {
+            const next = prev.map((ticket) => (ticket.id === ticketId ? updatedTicket : ticket));
+            cachedResolvedTickets = next;
+            return next;
+          });
+        } else {
+          setTickets((prev) => {
+            const next = prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, priority } : ticket));
+            cachedTickets = next;
+            return next;
+          });
+          setResolvedTickets((prev) => {
+            const next = prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, priority } : ticket));
+            cachedResolvedTickets = next;
+            return next;
+          });
+        }
+      } catch (err) {
+        console.error('Failed to update priority', err);
+        throw err;
+      }
+    },
+    []
+  );
+
   const releaseIssue = useCallback(
     async (ticketId: string, note?: string) => {
       await organizationAdminIssueApi.release(ticketId, note);
@@ -235,5 +275,6 @@ export const useOrganizationAdminIssues = (_seedValue?: string | null): UseOrgan
     releaseIssue,
     escalateIssue,
     assignUnit,
+    updatePriority,
   };
 };
