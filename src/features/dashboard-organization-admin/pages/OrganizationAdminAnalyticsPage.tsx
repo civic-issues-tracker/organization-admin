@@ -119,9 +119,9 @@ const OrganizationAdminAnalyticsPage = () => {
 			<div className="min-h-[81vh] rounded-2xl border border-[#D8CCBD] bg-[#F6F2EC] p-4">
 				<div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
 					{kpis.map((kpi) => (
-						<div key={kpi.label} className="rounded-xl border border-[#DDD0C2] bg-white p-3">
-							<p className="text-[10px] uppercase tracking-widest text-[#8D7968]">{kpi.label}</p>
-							<p className="mt-1 text-2xl font-black text-[#3E2B1F]">{kpi.value}</p>
+						<div key={kpi.label} className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3 text-center">
+							<p className={`text-2xl font-black ${kpi.label.includes('High Priority') ? 'text-[#C03E3E]' : 'text-[#3E2B1F]'}`}>{kpi.value}</p>
+							<p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9D8A78]">{kpi.label}</p>
 						</div>
 					))}
 				</div>

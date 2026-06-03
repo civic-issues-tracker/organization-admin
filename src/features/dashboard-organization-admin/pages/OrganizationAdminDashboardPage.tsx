@@ -364,25 +364,7 @@ const OrganizationAdminDashboardPage = () => {
 						</div>
 					</div>
 
-					{/* KPI Stats Row */}
-					<div className="grid grid-cols-2 gap-2">
-						<div className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3 text-center">
-							<p className="text-2xl font-black text-[#3E2B1F]">{kpis?.total_resolved ?? '–'}</p>
-							<p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9D8A78]">Total Resolved</p>
-						</div>
-						<div className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3 text-center">
-							<p className="text-2xl font-black text-[#3E2B1F]">{kpis?.active_issues ?? '–'}</p>
-							<p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9D8A78]">Active Issues</p>
-						</div>
-						<div className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3 text-center">
-							<p className="text-2xl font-black text-[#C03E3E]">{kpis?.high_priority_active ?? '–'}</p>
-							<p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9D8A78]">High Priority</p>
-						</div>
-						<div className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3 text-center">
-							<p className="text-2xl font-black text-[#3E2B1F]">{kpis?.avg_resolve_time_days ?? '–'}<span className="text-sm font-medium text-[#9D8A78]"> days</span></p>
-							<p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9D8A78]">Avg Resolve Time</p>
-						</div>
-					</div>
+
 
 					<div className="min-h-[72vh] rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3">
 
