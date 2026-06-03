@@ -21,7 +21,7 @@ const formatTimestamp = (value: string) => {
 const OrganizationAdminAlertsPage = () => {
 	const { notifications, isLoading, error, markRead, markAllRead } = useNotifications({ refreshIntervalMs: 0, refreshOnFocus: true });
 	const [searchQuery, setSearchQuery] = useState('');
-	const [levelFilter, setLevelFilter] = useState<'all' | 'critical' | 'warning' | 'info'>('all');
+	const [levelFilter, setLevelFilter] = useState<'all' | 'critical' | 'warning' | 'info' | 'unread'>('all');
 	const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
 	const showResetFilter = levelFilter !== 'all';
 
@@ -29,7 +29,10 @@ const OrganizationAdminAlertsPage = () => {
 		const q = searchQuery.trim().toLowerCase();
 		return notifications.filter((item) => {
 			const level = getNotificationLevel(item.notification_type);
-			if (levelFilter !== 'all' && level !== levelFilter) return false;
+			if (levelFilter !== 'all') {
+				if (levelFilter === 'unread' && item.is_read) return false;
+				if (levelFilter !== 'unread' && level !== levelFilter) return false;
+			}
 			if (!q) return true;
 			return (
 				item.id.toLowerCase().includes(q) ||
@@ -128,6 +131,7 @@ const OrganizationAdminAlertsPage = () => {
 			<div className="min-h-[81vh] rounded-2xl border border-[#D8CCBD] bg-[#F6F2EC] p-4">
 				<div className="mb-3 flex flex-wrap items-center gap-2">
 					<button onClick={() => setLevelFilter('all')} className={`rounded-full px-3 py-1 text-xs font-semibold ${levelFilter === 'all' ? 'bg-[#6A4834] text-white' : 'border border-[#D8CCBD] bg-white text-[#6E5A49]'}`}>All</button>
+					<button onClick={() => setLevelFilter('unread')} className={`rounded-full px-3 py-1 text-xs font-semibold ${levelFilter === 'unread' ? 'bg-[#6A4834] text-white' : 'border border-[#D8CCBD] bg-white text-[#6E5A49]'}`}>Unread</button>
 					<button onClick={() => setLevelFilter('critical')} className={`rounded-full px-3 py-1 text-xs font-semibold ${levelFilter === 'critical' ? 'bg-[#6A4834] text-white' : 'border border-[#D8CCBD] bg-white text-[#6E5A49]'}`}>Critical</button>
 					<button onClick={() => setLevelFilter('warning')} className={`rounded-full px-3 py-1 text-xs font-semibold ${levelFilter === 'warning' ? 'bg-[#6A4834] text-white' : 'border border-[#D8CCBD] bg-white text-[#6E5A49]'}`}>Warnings</button>
 					<button onClick={() => setLevelFilter('info')} className={`rounded-full px-3 py-1 text-xs font-semibold ${levelFilter === 'info' ? 'bg-[#6A4834] text-white' : 'border border-[#D8CCBD] bg-white text-[#6E5A49]'}`}>Informational</button>
