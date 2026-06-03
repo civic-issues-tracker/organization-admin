@@ -4,6 +4,7 @@ import { BarChart3, MapPin, MoreHorizontal, MoreVertical, Search, Send, Triangle
 import ThemeLoader from '../../../components/ui/ThemeLoader';
 import { type OrganizationAdminTicket } from '../organizationAdminMockData';
 import { useOrganizationAdminIssues } from '../hooks/useOrganizationAdminIssues';
+import { useMyPerformance } from '../hooks/useMyPerformance';
 import { useAuth } from '../../../hooks/useAuth';
 
 const priorityTone: Record<string, string> = {
@@ -67,6 +68,7 @@ const OrganizationAdminDashboardPage = () => {
 	const seed = user?.email ?? user?.id ?? user?.full_name;
 	const [searchQuery, setSearchQuery] = useState('');
 	const { tickets, resolvedTickets, isLoading, error, updateStatus, updateInternalNotes, releaseIssue, escalateIssue, updatePriority } = useOrganizationAdminIssues();
+	const { weeklyPerformance: rawWeeklyPerformance, kpis, isLoading: perfLoading } = useMyPerformance();
 	const [showResolved, setShowResolved] = useState(false);
 	const [showAllActiveTickets, setShowAllActiveTickets] = useState(false);
 	const [statusModal, setStatusModal] = useState<StatusModalState | null>(null);
@@ -80,67 +82,31 @@ const OrganizationAdminDashboardPage = () => {
 	// All tickets (active + resolved) for selection lookup
 	const allTickets = useMemo(() => [...tickets, ...resolvedTickets], [tickets, resolvedTickets]);
 	
-	// Dynamic weekly performance based on tickets processed/resolved
+	// Transform backend weekly_performance into bar chart data
 	const weeklyPerformance = useMemo(() => {
-		const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-		
-		// Find the most recent ticket date to anchor the week, so the graph isn't flat if DB is old
-		let anchorDate = new Date();
-		if (allTickets.length > 0) {
-			const dates = allTickets.map(t => new Date(t.resolutionDate || t.createdAt || new Date()).getTime());
-			const validDates = dates.filter(d => !Number.isNaN(d));
-			if (validDates.length > 0) {
-				anchorDate = new Date(Math.max(...validDates));
-			}
-		}
-		
-		const last7Days = Array.from({ length: 7 }).map((_, i) => {
-			const d = new Date(anchorDate);
-			d.setDate(anchorDate.getDate() - (6 - i));
+		// Fill all 7 days of the week so chart always has 7 bars
+		const allDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+		const dayMap = new Map(rawWeeklyPerformance.map((d) => [d.day, d]));
+
+		const data = allDays.map((day) => {
+			const found = dayMap.get(day);
 			return {
-				day: days[d.getDay()],
-				dateString: d.toDateString(),
-				count: 0
+				day,
+				created: found?.created ?? 0,
+				resolved: found?.resolved ?? 0,
+				total: (found?.created ?? 0) + (found?.resolved ?? 0),
 			};
 		});
 
-		// Only count tickets that are assigned to the currently logged-in admin
-		const myTickets = allTickets.filter((ticket) => {
-			const assignedName = ticket.assignedAdminName?.trim() || '';
-			const assignedLower = assignedName.toLowerCase();
-			return (
-				assignedName.length > 0 &&
-				(
-					(currentEmail.length > 0 && assignedLower.includes(currentEmail)) ||
-					(currentFullName.length > 0 && assignedLower.includes(currentFullName))
-				)
-			);
-		});
-
-		// Count any ticket updated or created in those 7 days
-		myTickets.forEach((ticket) => {
-			// fallback to a recent date if none is found to avoid breaking
-			const d = new Date(ticket.resolutionDate || ticket.createdAt || new Date());
-			const ticketDateStr = d.toDateString();
-			const dayData = last7Days.find((day) => day.dateString === ticketDateStr);
-			if (dayData) {
-				dayData.count += 1;
-			}
-		});
-
-		const maxCount = Math.max(...last7Days.map((d) => d.count), 1);
-		
-		return last7Days.map((d) => {
-			// Using inline styles for dynamic height limits instead of tailwind classes
-			// h-24 is 6rem (96px). Let's map count to a max of 80px or 100px.
-			const heightPx = Math.max(8, Math.round((d.count / maxCount) * 80));
-			return {
-				day: d.day,
-				count: d.count,
-				heightCode: heightPx,
-			};
-		});
-	}, [allTickets, currentEmail, currentFullName]);
+		const maxCount = Math.max(...data.map((d) => d.total), 1);
+		return data.map((d) => ({
+			day: d.day,
+			count: d.total,
+			created: d.created,
+			resolved: d.resolved,
+			heightCode: Math.max(8, Math.round((d.total / maxCount) * 80)),
+		}));
+	}, [rawWeeklyPerformance]);
 
 	const filteredTickets = tickets.filter((t) => {
 		const q = searchQuery.trim().toLowerCase();
@@ -366,21 +332,60 @@ const OrganizationAdminDashboardPage = () => {
 						<div className="grid grid-cols-7 items-end gap-2 h-24">
 							{weeklyPerformance.map((item, index) => (
 								<div key={`${item.day}-${index}`} className="text-center group relative">
-									<div 
-										style={{ height: `${item.heightCode}px` }}
-										className="mx-auto w-3 rounded-sm bg-[#B08E6A] transition-all group-hover:bg-[#8B7B69]" 
-									/>
+									<div className="mx-auto flex w-3 flex-col-reverse gap-px rounded-sm overflow-hidden" style={{ height: `${item.heightCode}px` }}>
+										{item.created > 0 && (
+											<div
+												className="w-full bg-[#B08E6A] transition-all group-hover:bg-[#8B7B69]"
+												style={{ flex: item.created }}
+											/>
+										)}
+										{item.resolved > 0 && (
+											<div
+												className="w-full bg-[#6A9E7E] transition-all group-hover:bg-[#4E8262]"
+												style={{ flex: item.resolved }}
+											/>
+										)}
+										{item.count === 0 && (
+											<div className="w-full bg-[#E0D4C7]" style={{ flex: 1 }} />
+										)}
+									</div>
 									<p className="mt-1 text-[10px] text-[#9D8A78]">{item.day}</p>
 									{/* Tooltip for exact count */}
-									<div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[#3E2B1F] text-white text-[10px] py-1 px-2 rounded pointer-events-none">
-										{item.count}
+									<div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[#3E2B1F] text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap">
+										{item.created}c / {item.resolved}r
 									</div>
 								</div>
 							))}
 						</div>
+						{/* Legend */}
+						<div className="mt-2 flex items-center justify-center gap-4 text-[10px] text-[#9D8A78]">
+							<span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-[#B08E6A]"></span> Created</span>
+							<span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-[#6A9E7E]"></span> Resolved</span>
+						</div>
+					</div>
+
+					{/* KPI Stats Row */}
+					<div className="grid grid-cols-2 gap-2">
+						<div className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3 text-center">
+							<p className="text-2xl font-black text-[#3E2B1F]">{kpis?.total_resolved ?? '–'}</p>
+							<p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9D8A78]">Total Resolved</p>
+						</div>
+						<div className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3 text-center">
+							<p className="text-2xl font-black text-[#3E2B1F]">{kpis?.active_issues ?? '–'}</p>
+							<p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9D8A78]">Active Issues</p>
+						</div>
+						<div className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3 text-center">
+							<p className="text-2xl font-black text-[#C03E3E]">{kpis?.high_priority_active ?? '–'}</p>
+							<p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9D8A78]">High Priority</p>
+						</div>
+						<div className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3 text-center">
+							<p className="text-2xl font-black text-[#3E2B1F]">{kpis?.avg_resolve_time_days ?? '–'}<span className="text-sm font-medium text-[#9D8A78]"> days</span></p>
+							<p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#9D8A78]">Avg Resolve Time</p>
+						</div>
 					</div>
 
 					<div className="min-h-[72vh] rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3">
+
 						<div className="mb-2 flex items-center justify-between">
 							<h3 className="text-base font-bold text-[#4A3628]">Active Tickets</h3>
 							<div className="flex items-center gap-2">

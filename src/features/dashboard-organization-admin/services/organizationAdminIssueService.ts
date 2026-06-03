@@ -48,4 +48,27 @@ export const organizationAdminIssueApi = {
     });
     return response.data as { status: string; message?: string };
   },
+  getMyPerformance: async (): Promise<MyPerformanceResponse> => {
+    const response = await privateApi.get('/analytics/org-admin/my-performance/');
+    return response.data as MyPerformanceResponse;
+  },
 };
+
+// Types for the performance endpoint
+export interface WeeklyPerformanceDay {
+  day: string;       // e.g. "Mon", "Tue"
+  created: number;
+  resolved: number;
+}
+
+export interface PerformanceKPIs {
+  total_resolved: number;
+  active_issues: number;
+  high_priority_active: number;
+  avg_resolve_time_days: number;
+}
+
+export interface MyPerformanceResponse {
+  weekly_performance: WeeklyPerformanceDay[];
+  kpis: PerformanceKPIs;
+}
