@@ -18,13 +18,16 @@ const OrganizationAdminNotificationsPage = () => {
 	const [messageText, setMessageText] = useState('');
 	const [localMessages, setLocalMessages] = useState<Record<string, { id: string; from: 'dispatch' | 'organization_admin'; text: string; at: string }[]>>({});
 	const [selectedThreadOnly, setSelectedThreadOnly] = useState(false);
-	const [threadTypeFilter, setThreadTypeFilter] = useState<'all' | 'dispatch' | 'city-alerts' | 'reporter'>('all');
+	const [threadTypeFilter, setThreadTypeFilter] = useState<'all' | 'dispatch' | 'city-alerts' | 'reporter' | 'unread'>('all');
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 
 	const filteredThreads = useMemo(() => {
 		const q = threadSearch.trim().toLowerCase();
 		return workspace.chatThreads.filter((thread) => {
-			if (threadTypeFilter !== 'all' && thread.id !== threadTypeFilter) return false;
+			if (threadTypeFilter !== 'all') {
+				if (threadTypeFilter === 'unread' && (!thread.unread || thread.unread === 0)) return false;
+				if (threadTypeFilter !== 'unread' && thread.id !== threadTypeFilter) return false;
+			}
 			if (!q) return true;
 			return (
 				thread.name.toLowerCase().includes(q) ||
@@ -100,6 +103,7 @@ const OrganizationAdminNotificationsPage = () => {
 					<span className="font-semibold text-[#725E4D]">Filter by type:</span>
 					{([
 						{ label: 'All', value: 'all' },
+						{ label: 'Unread', value: 'unread' },
 						{ label: 'Dispatch', value: 'dispatch' },
 						{ label: 'City Hall', value: 'city-alerts' },
 						{ label: 'Reporter', value: 'reporter' },
