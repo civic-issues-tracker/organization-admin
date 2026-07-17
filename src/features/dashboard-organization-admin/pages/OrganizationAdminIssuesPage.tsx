@@ -80,39 +80,39 @@ const OrganizationAdminIssuesPage = () => {
 
 	return (
 		<section>
-			<header className="mb-3 flex items-start justify-between">
+			<header className="mb-3 flex items-start justify-between gap-3">
 				<div>
-					<h2 className="text-[32px] font-black leading-tight text-[#3E2B1F]">
+					<h2 className="text-[32px] font-black leading-tight text-slate-900">
 						{user?.full_name || 'Your Organization'}
 					</h2>
-					<p className="text-xs font-bold uppercase tracking-wider text-[#8F7B69]">
+					<p className="text-xs font-bold uppercase tracking-wider text-slate-500">
 						Service Area · Issue Map
 					</p>
 					{ticketsWithoutLocation.length > 0 ? (
-						<span className="mt-2 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+						<span className="mt-2 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
 							No location data: {ticketsWithoutLocation.length}
 						</span>
 					) : null}
 					{visibleTickets.length === 0 && !isLoading && (
-						<p className="mt-1 text-xs text-[#B08E6A]">
+						<p className="mt-1 text-xs text-slate-400">
 							No issues with GPS coordinates yet — pins appear once issues include location data.
 						</p>
 					)}
 				</div>
 				<div className="flex items-center gap-2">
-					<div className="flex items-center rounded-full border border-[#DDCFC0] bg-[#F8F6F2] px-3 py-1.5">
-						<Search size={14} className="mr-1 text-[#9D8A78]" />
+					<div className="flex items-center rounded-full border border-black/5 bg-white px-3 py-1.5 shadow-sm">
+						<Search size={14} className="mr-1 text-slate-400" />
 						<input
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							placeholder="Search ticket ID or address..."
-							className="w-56 bg-transparent text-xs outline-none"
+							className="w-56 bg-transparent text-xs outline-none text-slate-700 placeholder:text-slate-400"
 						/>
 					</div>
 					<button
 						type="button"
 						onClick={() => setSearchQuery('')}
-						className="rounded-full border border-[#DDCFC0] bg-[#F8F6F2] p-2 text-[#8B7B69]"
+						className="rounded-full border border-black/5 bg-white p-2 text-slate-500 shadow-sm"
 						aria-label="Clear search"
 					>
 						<X size={14} />
@@ -120,29 +120,29 @@ const OrganizationAdminIssuesPage = () => {
 				</div>
 			</header>
 
-			<div className="relative min-h-[81vh] overflow-hidden rounded-4xl border border-[#D8CCBD] bg-[#DACEB8]">
+			<div className="relative min-h-[81vh] overflow-hidden rounded-[2rem] border border-black/5 bg-white/75 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm">
 				{/* Map layer */}
 				<div className="absolute inset-0 z-0">
 					<Suspense fallback={<div className="h-full w-full bg-gray-100" />}>
 						<LazyMap center={mapCenter} sites={mapSites} />
 					</Suspense>
 				</div>
-				<div className="absolute inset-0 z-1 bg-linear-to-t from-[#DACEB8]/20 via-transparent to-[#DACEB8]/10 pointer-events-none" />
+				<div className="absolute inset-0 z-1 bg-linear-to-t from-white/20 via-transparent to-white/10 pointer-events-none" />
 
 				{/* Top-right: legend */}
-				<div className="absolute right-4 top-4 z-20 w-48 rounded-3xl border border-white/70 bg-white/95 p-4 shadow-[0_24px_60px_rgba(68,43,24,0.18)] backdrop-blur-md">
-					<p className="mb-2 text-[11px] font-bold uppercase text-[#7A6756]">Map Legend</p>
-					<ul className="space-y-1 text-xs text-[#4F3A2A]">
+				<div className="absolute right-4 top-4 z-20 w-48 rounded-3xl border border-black/5 bg-white/95 p-4 shadow-[0_24px_60px_rgba(15,23,42,0.12)] backdrop-blur-md">
+					<p className="mb-2 text-[11px] font-bold uppercase text-slate-500">Map Legend</p>
+					<ul className="space-y-1 text-xs text-slate-700">
 						<li><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#2563EB]" /> Submitted</li>
 						<li><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#F59E0B]" /> In Progress</li>
 						<li><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#16A34A]" /> Resolved</li>
 						<li><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#DC2626]" /> Rejected</li>
 					</ul>
-					<p className="mt-3 border-t border-[#E7DBCF] pt-2 text-[10px] text-[#9D8A78]">
+					<p className="mt-3 border-t border-black/5 pt-2 text-[10px] text-slate-500">
 						{mapSites.length} {issueCountLabel} with GPS data
 					</p>
 					{ticketsWithoutLocation.length > 0 ? (
-						<p className="mt-2 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800">
+						<p className="mt-2 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700">
 							{ticketsWithoutLocation.length} hidden without location
 						</p>
 					) : null}

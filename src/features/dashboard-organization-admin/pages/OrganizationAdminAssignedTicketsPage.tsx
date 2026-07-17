@@ -100,25 +100,25 @@ const OrganizationAdminAssignedTicketsPage = () => {
   return (
     <section>
       <header className="mb-6">
-        <h2 className="text-[32px] font-black leading-tight text-[#3E2B1F]">Assigned Tickets</h2>
-        <p className="text-sm font-semibold text-[#857060]">Issues directly assigned to your account.</p>
+        <h2 className="text-[32px] font-black leading-tight text-slate-900">Assigned Tickets</h2>
+        <p className="text-sm font-semibold text-slate-500">Issues directly assigned to your account.</p>
       </header>
 
-      <div className="mb-6 flex items-center justify-between gap-4 rounded-3xl bg-[#F6F2EC] p-3 shadow-inner">
-        <div className="flex flex-1 items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm border border-[#E7DBCF]">
-          <Search size={16} className="text-[#A49484]" />
+      <div className="mb-6 flex items-center justify-between gap-4 rounded-3xl bg-slate-50/50 p-3 shadow-inner border border-black/5">
+        <div className="flex flex-1 items-center gap-2 rounded-2xl bg-white px-4 py-2 shadow-sm border border-black/5">
+          <Search size={16} className="text-slate-400" />
           <input
             type="text"
             placeholder="Search assigned tickets by ID, address, or keyword..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent text-sm text-[#4A3628] outline-none placeholder:text-[#B6A696]"
+            className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-2xl border border-[#DDCFC0] bg-white px-4 py-2.5 text-sm font-semibold text-[#857060] shadow-sm outline-none"
+          className="rounded-2xl border border-black/5 bg-white px-4 py-2.5 text-sm font-semibold text-slate-500 shadow-sm outline-none"
           title="Filter tickets by status"
         >
           <option value="all">All Statuses</option>
@@ -136,7 +136,7 @@ const OrganizationAdminAssignedTicketsPage = () => {
               <div
                 key={ticket.id}
                 className={`overflow-hidden rounded-3xl border transition-all duration-300 ${
-                  isExpanded ? 'border-[#C9A78A] shadow-md' : 'border-[#E7DBCF] bg-white shadow-sm hover:shadow-md hover:border-[#D0BAA7]'
+                  isExpanded ? 'border-secondary/30 shadow-md ring-4 ring-secondary/5' : 'border-black/5 bg-white shadow-sm hover:shadow-md hover:border-secondary/20'
                 }`}
               >
                 {/* Header (Always visible) */}
@@ -145,28 +145,28 @@ const OrganizationAdminAssignedTicketsPage = () => {
                   onClick={() => handleToggleExpand(ticket.id)}
                   className="flex w-full text-left items-center gap-4 p-4 bg-white outline-none"
                 >
-                  <div className={`flex w-16 flex-col items-center justify-center rounded-2xl py-2 text-center shrink-0 transition-colors ${isExpanded ? 'bg-[#EFE8DF]' : 'bg-[#F6F2EC]'}`}>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#9D8A78]">Rank</span>
-                    <span className="text-xl font-black text-[#6B4C33]">{ticket.priority[0]}</span>
+                  <div className={`flex w-16 flex-col items-center justify-center rounded-2xl py-2 text-center shrink-0 transition-colors ${isExpanded ? 'bg-secondary/10' : 'bg-slate-50 border border-black/5'}`}>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Rank</span>
+                    <span className="text-xl font-black text-slate-900">{ticket.priority[0]}</span>
                   </div>
                   <div className="flex-1 flex flex-col justify-center min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-[#6B4C33]">{ticket.issueNumber}</span>
-                      <span className="rounded-full bg-[#E5D5C5] px-2 py-0.5 text-[10px] font-bold text-[#5A4737]">
+                      <span className="font-mono text-xs font-bold text-slate-500">{ticket.issueNumber}</span>
+                      <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold text-secondary">
                         {ticket.category || 'General'}
                       </span>
                     </div>
-                    <h4 className={`mt-1 text-sm font-bold text-[#3E2B1F] leading-snug ${isExpanded ? '' : 'line-clamp-2'}`}>
+                    <h4 className={`mt-1 text-sm font-bold text-slate-900 leading-snug ${isExpanded ? '' : 'line-clamp-2'}`}>
                       {ticket.title}
                     </h4>
                     <div className="mt-2 flex items-center justify-between text-xs">
-                       <div className="flex items-center text-[#857060] max-w-[60%] truncate">
+                       <div className="flex items-center text-slate-500 max-w-[60%] truncate">
                           <MapPin size={12} className="mr-1 shrink-0" />
                           <span className="truncate">{ticket.location || 'No location'}</span>
                        </div>
                        <div className="flex items-center gap-3">
-                         <span className="font-bold text-[#4A3628] bg-[#F2EBE2] px-2 py-0.5 rounded-full">{formatStatusLabel(ticket.status)}</span>
-                         {isExpanded ? <ChevronUp size={16} className="text-[#857060]" /> : <ChevronDown size={16} className="text-[#857060]" />}
+                         <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full">{formatStatusLabel(ticket.status)}</span>
+                         {isExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
                        </div>
                     </div>
                   </div>
@@ -174,11 +174,11 @@ const OrganizationAdminAssignedTicketsPage = () => {
 
                 {/* Expanded Details Body */}
                 {isExpanded && (
-                  <div className="border-t border-[#E7DBCF] bg-[#FAF8F5] p-5">
+                  <div className="border-t border-black/5 bg-slate-50/50 p-5">
                     <div className="grid md:grid-cols-[1fr_250px] gap-6">
                       {/* Left Col: Actions & Notes */}
                       <div>
-                        <h5 className="text-[10px] font-bold uppercase tracking-widest text-[#9D8A78] mb-2">Update Status</h5>
+                        <h5 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Update Status</h5>
                         <div className="flex flex-wrap gap-2 mb-6">
                           {(['submitted', 'in_progress', 'resolved', 'rejected'] as const).map((status) => (
                             <button
@@ -188,8 +188,8 @@ const OrganizationAdminAssignedTicketsPage = () => {
                               disabled={ticket.status === status}
                               className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                                 ticket.status === status
-                                  ? 'border-[#C9A78A] bg-[#EFE4D6] text-[#6B4C33] cursor-default'
-                                  : 'border-[#E0D3C5] bg-white text-[#6D5A48] hover:border-[#C9A78A]'
+                                  ? 'border-secondary/30 bg-secondary/10 text-secondary cursor-default'
+                                  : 'border-black/5 bg-white text-slate-600 hover:border-secondary/30'
                               }`}
                             >
                               {formatStatusLabel(status)}
@@ -197,29 +197,29 @@ const OrganizationAdminAssignedTicketsPage = () => {
                           ))}
                         </div>
 
-                        <h5 className="text-[10px] font-bold uppercase tracking-widest text-[#9D8A78] mb-2">Internal Notes</h5>
-                        <div className="rounded-xl border border-[#DDCFC0] bg-white p-3 mb-3 max-h-32 overflow-y-auto">
+                        <h5 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Internal Notes</h5>
+                        <div className="rounded-xl border border-black/5 bg-white shadow-sm p-3 mb-3 max-h-32 overflow-y-auto">
                           {ticket.internalNotes ? (
-                            <p className="whitespace-pre-wrap text-xs text-[#5A4737]">{ticket.internalNotes}</p>
+                            <p className="whitespace-pre-wrap text-xs text-slate-700">{ticket.internalNotes}</p>
                           ) : (
-                            <p className="text-xs text-[#A49484] italic">No internal notes yet.</p>
+                            <p className="text-xs text-slate-400 italic">No internal notes yet.</p>
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-2 rounded-xl border border-[#DDCFC0] bg-white p-1.5 focus-within:border-[#C9A78A] focus-within:ring-1 focus-within:ring-[#C9A78A] transition-all">
+                        <div className="flex items-center gap-2 rounded-xl border border-black/5 bg-white p-1.5 focus-within:border-secondary/30 focus-within:ring-1 focus-within:ring-secondary/30 shadow-sm transition-all">
                           <input
                             type="text"
                             placeholder="Type a new note..."
                             value={noteText}
                             onChange={(e) => setNoteText(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSendNote(ticket)}
-                            className="flex-1 bg-transparent px-2 text-sm outline-none text-[#4A3628] placeholder:text-[#B6A696]"
+                            className="flex-1 bg-transparent px-2 text-sm outline-none text-slate-900 placeholder:text-slate-400"
                           />
                           <button
                             type="button"
                             onClick={() => handleSendNote(ticket)}
                             disabled={!noteText.trim()}
-                            className="shrink-0 rounded-lg bg-[#6A4834] p-2 text-white disabled:opacity-50 hover:bg-[#5A3A29] transition-colors"
+                            className="shrink-0 rounded-lg bg-secondary p-2 text-white disabled:opacity-50 hover:bg-secondary/90 transition-colors"
                             title="Send note"
                           >
                             <Send size={14} />
@@ -229,7 +229,7 @@ const OrganizationAdminAssignedTicketsPage = () => {
 
                       {/* Right Col: Image & Extra Details */}
                       <div className="flex flex-col gap-4">
-                        <div className="flex min-h-35 flex-1 items-center justify-center overflow-hidden rounded-xl border border-[#DDCFC0] bg-[#EFE8DF]">
+                        <div className="flex min-h-35 flex-1 items-center justify-center overflow-hidden rounded-xl border border-black/5 bg-slate-50">
                           {ticket.images && ticket.images.length > 0 ? (
                             <img
                               src={ticket.images[0].image}
@@ -238,16 +238,16 @@ const OrganizationAdminAssignedTicketsPage = () => {
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           ) : (
-                            <div className="flex flex-col items-center text-[#A49484]">
+                            <div className="flex flex-col items-center text-slate-400">
                               <ImageIcon size={24} className="mb-2 opacity-50" />
                               <p className="text-[10px] font-semibold uppercase tracking-wider">No Image</p>
                             </div>
                           )}
                         </div>
-                        <div className="rounded-xl border border-[#DDCFC0] bg-white p-3">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-[#9D8A78] mb-1">Reporter</p>
-                          <p className="text-sm font-semibold text-[#4A3628]">{ticket.reporter ?? 'Unknown'}</p>
-                          <p className="text-xs text-[#857060]">{ticket.timeAgo}</p>
+                        <div className="rounded-xl border border-black/5 bg-white shadow-sm p-3">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Reporter</p>
+                          <p className="text-sm font-semibold text-slate-900">{ticket.reporter ?? 'Unknown'}</p>
+                          <p className="text-xs text-slate-500">{ticket.timeAgo}</p>
                         </div>
                       </div>
                     </div>
@@ -257,7 +257,7 @@ const OrganizationAdminAssignedTicketsPage = () => {
             );
           })
         ) : (
-          <div className="rounded-3xl border border-dashed border-[#CCBBA8] p-10 text-center text-[#857060]">
+          <div className="rounded-3xl border border-dashed border-black/10 bg-white/50 p-10 text-center text-slate-500">
             No assigned tickets match your criteria.
           </div>
         )}

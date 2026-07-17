@@ -2,24 +2,24 @@ import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, MapPin, MoreHorizontal, MoreVertical, Search, Send, TriangleAlert } from 'lucide-react';
 import ThemeLoader from '../../../components/ui/ThemeLoader';
-import { type OrganizationAdminTicket } from '../organizationAdminMockData';
+import { type OrganizationAdminTicket, type IssuePriority } from '../organizationAdminMockData';
 import { useOrganizationAdminIssues } from '../hooks/useOrganizationAdminIssues';
 import { useMyPerformance } from '../hooks/useMyPerformance';
 import { useAuth } from '../../../hooks/useAuth';
 
 const priorityTone: Record<string, string> = {
-	High: 'text-[#C03E3E]',
-	Medium: 'text-[#AF7A1E]',
-	Low: 'text-[#2E8D56]',
+	High: 'text-red-600',
+	Medium: 'text-amber-600',
+	Low: 'text-emerald-600',
 };
 
 const statusTone: Record<OrganizationAdminTicket['status'], string> = {
-	submitted: 'bg-[#FFE9EA] text-[#D63945]',
-	in_progress: 'bg-[#FFF4D8] text-[#9A6F16]',
-	resolved: 'bg-[#DCF5E4] text-[#20844A]',
-	rejected: 'bg-[#EDEDED] text-[#6A6A6A]',
-	pending_admin: 'bg-[#E9E7F6] text-[#5B54A4]',
-	escalated: 'bg-[#FFE6D6] text-[#B84A1E]',
+	submitted: 'bg-red-50 text-red-700',
+	in_progress: 'bg-amber-50 text-amber-700',
+	resolved: 'bg-emerald-50 text-emerald-700',
+	rejected: 'bg-slate-100 text-slate-600',
+	pending_admin: 'bg-indigo-50 text-indigo-700',
+	escalated: 'bg-orange-50 text-orange-700',
 };
 
 const statusLabels: Record<OrganizationAdminTicket['status'], string> = {
@@ -65,10 +65,9 @@ const getStatusModalPlaceholder = (mode: StatusModalMode) => {
 const OrganizationAdminDashboardPage = () => {
 	const { user, showToast } = useAuth();
 	const navigate = useNavigate();
-	const seed = user?.email ?? user?.id ?? user?.full_name;
 	const [searchQuery, setSearchQuery] = useState('');
 	const { tickets, resolvedTickets, isLoading, error, updateStatus, updateInternalNotes, releaseIssue, escalateIssue, updatePriority } = useOrganizationAdminIssues();
-	const { weeklyPerformance: rawWeeklyPerformance, kpis, isLoading: perfLoading } = useMyPerformance();
+	const { weeklyPerformance: rawWeeklyPerformance } = useMyPerformance();
 	const [showResolved, setShowResolved] = useState(false);
 	const [showAllActiveTickets, setShowAllActiveTickets] = useState(false);
 	const [statusModal, setStatusModal] = useState<StatusModalState | null>(null);
@@ -263,7 +262,7 @@ const OrganizationAdminDashboardPage = () => {
 		openStatusModal('escalate', 'escalated');
 	};
 
-	const handlePriorityChange = async (newPriority: string) => {
+	const handlePriorityChange = async (newPriority: IssuePriority) => {
 		if (!selected) return;
 		if (isLockedByOther) {
 			showToast(`This issue is locked by ${assignedAdminName}.`, 'error');
@@ -289,7 +288,7 @@ const OrganizationAdminDashboardPage = () => {
 	if (!selected) {
 		return (
 			<section>
-				<div className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-6 text-sm text-[#857060]">
+				<div className="rounded-2xl border border-black/5 bg-slate-50 p-6 text-sm text-slate-500">
 					No organization issues are available right now.
 				</div>
 			</section>
@@ -300,15 +299,15 @@ const OrganizationAdminDashboardPage = () => {
 		<section>
 			<header className="mb-3 flex items-start justify-between gap-3">
 				<div>
-					<h2 className="text-[38px] font-black leading-[1.05] text-[#3E2B1F]">Issue Queue</h2>
-					<p className="text-xs text-[#857060]">Review, update, and dispatch assigned civic issues.</p>
-					<p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#B08E6A]">
+					<h2 className="text-[38px] font-black leading-[1.05] text-slate-900">Issue Queue</h2>
+					<p className="text-xs text-slate-500">Review, update, and dispatch assigned civic issues.</p>
+					<p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-secondary">
 						Assigned to {orgName} • {error ? 'Offline cache' : 'Live data'}
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
-					<div className="flex items-center rounded-full border border-[#DDCFC0] bg-[#F8F6F2] px-3 py-1.5">
-						<Search size={14} className="mr-1 text-[#9D8A78]" />
+					<div className="flex items-center rounded-full border border-black/5 bg-slate-50 px-3 py-1.5">
+						<Search size={14} className="mr-1 text-slate-400" />
 						<input
 							placeholder="Search ticket ID or address..."
 							value={searchQuery}
@@ -316,7 +315,7 @@ const OrganizationAdminDashboardPage = () => {
 							className="w-56 bg-transparent text-xs outline-none"
 						/>
 					</div>
-					<button type="button" className="rounded-full border border-[#DDCFC0] bg-[#F8F6F2] p-2 text-[#8B7B69]" aria-label="More options">
+					<button type="button" className="rounded-full border border-black/5 bg-slate-50 p-2 text-slate-500 hover:bg-slate-100" aria-label="More options">
 						<MoreHorizontal size={14} />
 					</button>
 				</div>
@@ -324,10 +323,10 @@ const OrganizationAdminDashboardPage = () => {
 
 			<div className="grid grid-cols-12 gap-3">
 				<div className="col-span-12 space-y-3 xl:col-span-5">
-					<div className="rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3">
+					<div className="rounded-2xl border border-black/5 bg-slate-50 p-3">
 						<div className="mb-2 flex items-center justify-between">
-							<h3 className="text-sm font-semibold text-[#4A3628]">My Weekly Performance</h3>
-							<BarChart3 size={16} className="text-[#B19E8B]" />
+							<h3 className="text-sm font-semibold text-slate-900">My Weekly Performance</h3>
+							<BarChart3 size={16} className="text-slate-400" />
 						</div>
 						<div className="grid grid-cols-7 items-end gap-2 h-24">
 							{weeklyPerformance.map((item, index) => (
@@ -335,49 +334,49 @@ const OrganizationAdminDashboardPage = () => {
 									<div className="mx-auto flex w-3 flex-col-reverse gap-px rounded-sm overflow-hidden" style={{ height: `${item.heightCode}px` }}>
 										{item.created > 0 && (
 											<div
-												className="w-full bg-[#B08E6A] transition-all group-hover:bg-[#8B7B69]"
+												className="w-full bg-secondary transition-all group-hover:bg-secondary/80"
 												style={{ flex: item.created }}
 											/>
 										)}
 										{item.resolved > 0 && (
 											<div
-												className="w-full bg-[#6A9E7E] transition-all group-hover:bg-[#4E8262]"
+												className="w-full bg-emerald-500 transition-all group-hover:bg-emerald-600"
 												style={{ flex: item.resolved }}
 											/>
 										)}
 										{item.count === 0 && (
-											<div className="w-full bg-[#E0D4C7]" style={{ flex: 1 }} />
+											<div className="w-full bg-slate-200" style={{ flex: 1 }} />
 										)}
 									</div>
-									<p className="mt-1 text-[10px] text-[#9D8A78]">{item.day}</p>
+									<p className="mt-1 text-[10px] text-slate-400">{item.day}</p>
 									{/* Tooltip for exact count */}
-									<div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[#3E2B1F] text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap">
+									<div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap">
 										{item.created}c / {item.resolved}r
 									</div>
 								</div>
 							))}
 						</div>
 						{/* Legend */}
-						<div className="mt-2 flex items-center justify-center gap-4 text-[10px] text-[#9D8A78]">
-							<span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-[#B08E6A]"></span> Created</span>
-							<span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-[#6A9E7E]"></span> Resolved</span>
+						<div className="mt-2 flex items-center justify-center gap-4 text-[10px] text-slate-500">
+							<span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-secondary"></span> Created</span>
+							<span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-500"></span> Resolved</span>
 						</div>
 					</div>
 
 
 
-					<div className="min-h-[72vh] rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3">
+					<div className="min-h-[72vh] rounded-2xl border border-black/5 bg-slate-50 p-3">
 
 						<div className="mb-2 flex items-center justify-between">
-							<h3 className="text-base font-bold text-[#4A3628]">Active Tickets</h3>
+							<h3 className="text-base font-bold text-slate-900">Active Tickets</h3>
 							<div className="flex items-center gap-2">
 								<button 
 									onClick={() => navigate('/dashboard/assigned')}
-									className="text-[10px] font-bold uppercase text-[#A67C52] hover:text-[#8B643A] transition"
+									className="text-[10px] font-bold uppercase text-secondary hover:text-secondary/80 transition"
 								>
 									View My Assigned &rarr;
 								</button>
-								<span className="rounded-full bg-[#E9DED2] px-2 py-0.5 text-xs text-[#705A47]">{filteredTickets.length} Total</span>
+								<span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600">{filteredTickets.length} Total</span>
 							</div>
 						</div>
 						<div className="space-y-2">
@@ -388,36 +387,36 @@ const OrganizationAdminDashboardPage = () => {
 									onClick={() => setSelectedId(ticket.id)}
 									className={`w-full rounded-xl border bg-white p-3 text-left transition ${
 										selected?.id === ticket.id
-											? 'border-[#C9A78A] shadow-[0_0_0_1px_#d4b296]'
-											: 'border-[#E4D8CA] hover:border-[#d8c4b0]'
+											? 'border-secondary shadow-sm'
+											: 'border-black/5 hover:border-black/10'
 									}`}
 								>
 									<div className="mb-1 flex items-center justify-between">
-										<p className="text-xs font-bold text-[#7A6655]">{ticket.issueNumber}</p>
+										<p className="text-xs font-bold text-slate-500">{ticket.issueNumber}</p>
 										<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusTone[ticket.status]}`}>
 											{formatStatusLabel(ticket.status)}
 										</span>
 									</div>
-									<h4 className="text-sm font-semibold text-[#362518]">{ticket.title}</h4>
-									<p className="mt-1 text-xs text-[#8A7767]">{ticket.location}</p>
+									<h4 className="text-sm font-semibold text-slate-900">{ticket.title}</h4>
+									<p className="mt-1 text-xs text-slate-500">{ticket.location}</p>
 									<div className="mt-2 flex flex-wrap items-center gap-1 text-[10px]">
 										{ticket.assignedAdminName ? (
-											<span className="rounded-full border border-[#D8C7B4] bg-[#F6EEE4] px-2 py-0.5 font-semibold text-[#6B4C33]">
+											<span className="rounded-full border border-black/5 bg-slate-50 px-2 py-0.5 font-semibold text-slate-600">
 												Assigned: {ticket.assignedAdminName}
 										</span>
 										) : null}
 										{ticket.reopenReason ? (
-											<span className="rounded-full border border-[#E6C1AE] bg-[#FFE8DD] px-2 py-0.5 font-semibold text-[#9C3F1C]">
+											<span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 font-semibold text-red-700">
 												Reopened
 											</span>
 										) : null}
 									</div>
-									<div className="mt-2 flex items-center justify-between border-t border-[#EFE5DB] pt-2 text-[11px]">
+									<div className="mt-2 flex items-center justify-between border-t border-black/5 pt-2 text-[11px]">
 										<p className={priorityTone[ticket.priority]}>
 											<TriangleAlert size={12} className="mr-1 inline" />
 											{ticket.priority} Priority
 										</p>
-										<span className="text-[#B2A08F]">{ticket.timeAgo}</span>
+										<span className="text-slate-400">{ticket.timeAgo}</span>
 									</div>
 								</button>
 							))}
@@ -427,7 +426,7 @@ const OrganizationAdminDashboardPage = () => {
 								<button
 									type="button"
 									onClick={() => setShowAllActiveTickets((prev) => !prev)}
-									className="rounded-full border border-[#D8C7B4] bg-white px-4 py-1.5 text-xs font-semibold text-[#6B4C33] transition hover:border-[#C9A78A] hover:bg-[#FCF8F3]"
+									className="rounded-full border border-black/5 bg-white px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-black/20 hover:bg-slate-50"
 								>
 									{showAllActiveTickets ? 'Show fewer active tickets' : `Show all active tickets (${filteredTickets.length - activeTicketPreviewLimit} more)`}
 								</button>
@@ -436,11 +435,11 @@ const OrganizationAdminDashboardPage = () => {
 
 						{/* ── Resolved tickets — collapsible so admin can reopen them ── */}
 						{resolvedTickets.length > 0 && (
-							<div className="mt-4 border-t border-[#EFE5DB] pt-3">
+							<div className="mt-4 border-t border-black/5 pt-3">
 								<button
 									type="button"
 									onClick={() => setShowResolved((p) => !p)}
-									className="mb-2 flex w-full items-center justify-between text-sm font-semibold text-[#6B5242] hover:text-[#4A3628]"
+									className="mb-2 flex w-full items-center justify-between text-sm font-semibold text-slate-700 hover:text-slate-900"
 								>
 									<span>Resolved ({resolvedTickets.length})</span>
 									<span className="text-xs">{showResolved ? '▲ Hide' : '▼ Show'}</span>
@@ -454,26 +453,26 @@ const OrganizationAdminDashboardPage = () => {
 												onClick={() => setSelectedId(ticket.id)}
 												className={`w-full rounded-xl border bg-white p-3 text-left opacity-80 transition ${
 													selected?.id === ticket.id
-														? 'border-[#C9A78A] shadow-[0_0_0_1px_#d4b296] opacity-100'
-														: 'border-[#E4D8CA] hover:border-[#d8c4b0] hover:opacity-100'
+														? 'border-secondary shadow-sm opacity-100'
+														: 'border-black/5 hover:border-black/10 hover:opacity-100'
 												}`}
 											>
 												<div className="mb-1 flex items-center justify-between">
-													<p className="text-xs font-bold text-[#7A6655]">{ticket.issueNumber}</p>
+													<p className="text-xs font-bold text-slate-500">{ticket.issueNumber}</p>
 													<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusTone[ticket.status]}`}>
 														{formatStatusLabel(ticket.status)}
 													</span>
 												</div>
-												<h4 className="text-sm font-semibold text-[#362518]">{ticket.title}</h4>
-												<p className="mt-1 text-xs text-[#8A7767]">{ticket.location}</p>
+												<h4 className="text-sm font-semibold text-slate-900">{ticket.title}</h4>
+												<p className="mt-1 text-xs text-slate-500">{ticket.location}</p>
 												<div className="mt-2 flex flex-wrap items-center gap-1 text-[10px]">
 													{ticket.assignedAdminName ? (
-														<span className="rounded-full border border-[#D8C7B4] bg-[#F6EEE4] px-2 py-0.5 font-semibold text-[#6B4C33]">
+														<span className="rounded-full border border-black/5 bg-slate-50 px-2 py-0.5 font-semibold text-slate-600">
 															Assigned: {ticket.assignedAdminName}
 													</span>
 													) : null}
 													{ticket.reopenReason ? (
-														<span className="rounded-full border border-[#E6C1AE] bg-[#FFE8DD] px-2 py-0.5 font-semibold text-[#9C3F1C]">
+														<span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 font-semibold text-red-700">
 															Reopened
 														</span>
 													) : null}
@@ -487,24 +486,24 @@ const OrganizationAdminDashboardPage = () => {
 					</div>
 				</div>
 
-				<div className="col-span-12 flex min-h-[72vh] flex-col rounded-2xl border border-[#DFD3C5] bg-[#F9F6F2] p-3 xl:col-span-7">
-					<div className="mb-3 flex items-center justify-between border-b border-[#E7DACD] pb-2">
+				<div className="col-span-12 flex min-h-[72vh] flex-col rounded-2xl border border-slate-200 bg-white p-3 xl:col-span-7">
+					<div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
 						<div className="flex items-center gap-2">
-							<span className="text-xl font-black text-[#4A3628]">{selected?.issueNumber ?? 'N/A'}</span>
-							<span className="rounded-full bg-[#E9E7E2] px-2 py-0.5 text-[11px] font-semibold text-[#617083]">{selected?.category ?? 'Uncategorized'}</span>
+							<span className="text-xl font-black text-slate-900">{selected?.issueNumber ?? 'N/A'}</span>
+							<span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{selected?.category ?? 'Uncategorized'}</span>
 						</div>
-						<div className="flex items-center gap-2 text-sm text-[#8E7E6D]">
+						<div className="flex items-center gap-2 text-sm text-slate-500">
 							<select
 								value={selected?.priority || 'Low'}
-								onChange={(e) => handlePriorityChange(e.target.value)}
+								onChange={(e) => handlePriorityChange(e.target.value as IssuePriority)}
 								disabled={isLockedByOther}
-								className={`rounded-full border px-2 py-1 outline-none text-xs font-semibold ${priorityTone[selected?.priority || 'Low']} border-[#E0D3C5] bg-transparent disabled:opacity-50`}
+								className={`rounded-full border px-2 py-1 outline-none text-xs font-semibold ${priorityTone[selected?.priority || 'Low']} border-slate-200 bg-transparent disabled:opacity-50`}
 							>
-								<option value="Low" className="text-[#2E8D56]">Low Priority</option>
-								<option value="Medium" className="text-[#AF7A1E]">Medium Priority</option>
-								<option value="High" className="text-[#C03E3E]">High Priority</option>
+								<option value="Low" className="text-emerald-600">Low Priority</option>
+								<option value="Medium" className="text-amber-600">Medium Priority</option>
+								<option value="High" className="text-red-600">High Priority</option>
 							</select>
-							<button onClick={cycleStatus} className="rounded-full border border-[#E0D3C5] px-2 py-1" disabled={isLockedByOther}>
+							<button onClick={cycleStatus} className="rounded-full border border-slate-200 px-2 py-1" disabled={isLockedByOther}>
 								Status: {statusLabel}
 							</button>
 							<MoreVertical size={16} />
@@ -520,8 +519,8 @@ const OrganizationAdminDashboardPage = () => {
 								disabled={selected.status === status || isLockedByOther}
 								className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
 									selected.status === status
-										? 'border-[#C9A78A] bg-[#EFE4D6] text-[#6B4C33]'
-										: 'border-[#E0D3C5] bg-white text-[#6D5A48] hover:border-[#C9A78A]'
+										? 'border-slate-300 bg-slate-100 text-slate-800'
+										: 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
 								}`}
 							>
 								Set {formatStatusLabel(status)}
@@ -531,12 +530,12 @@ const OrganizationAdminDashboardPage = () => {
 
 					<div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
 						{assignedAdminName && (
-							<span className={`rounded-full border px-3 py-1 ${isLockedByOther ? 'border-[#E6C1AE] bg-[#FFE8DD] text-[#9C3F1C]' : 'border-[#D8C7B4] bg-[#F6EEE4] text-[#6B4C33]'}`}>
+							<span className={`rounded-full border px-3 py-1 ${isLockedByOther ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-slate-200 bg-slate-100 text-slate-800'}`}>
 								Assigned: {assignedAdminName}
 							</span>
 						)}
 						{selected?.reopenReason ? (
-							<span className="rounded-full border border-[#E6C1AE] bg-[#FFE8DD] px-3 py-1 font-semibold text-[#9C3F1C]">
+							<span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 font-semibold text-amber-700">
 								Reopened
 							</span>
 						) : null}
@@ -544,7 +543,7 @@ const OrganizationAdminDashboardPage = () => {
 							type="button"
 							onClick={handleRelease}
 							disabled={!isAssignedToCurrentUser}
-							className="rounded-full border border-[#E0D3C5] bg-white px-3 py-1 font-semibold text-[#6D5A48] disabled:cursor-not-allowed disabled:opacity-40"
+							className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
 						>
 							Release
 						</button>
@@ -552,32 +551,32 @@ const OrganizationAdminDashboardPage = () => {
 							type="button"
 							onClick={handleEscalate}
 							disabled={isLockedByOther || selected.status === 'escalated'}
-							className="rounded-full border border-[#E6C1AE] bg-[#FFE8DD] px-3 py-1 font-semibold text-[#9C3F1C] disabled:cursor-not-allowed disabled:opacity-40"
+							className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
 						>
 							Escalate
 						</button>
 						{isLockedByOther && (
-							<span className="text-[#9C3F1C]">Locked by another admin.</span>
+							<span className="text-amber-700">Locked by another admin.</span>
 						)}
 					</div>
 
 					<div className="mb-4">
 						<div className="mb-2 flex items-center justify-between">
-							<span className="font-mono text-sm font-bold text-[#6B4C33]">{selected?.issueNumber}</span>
-							<span className="rounded-full bg-[#E5D5C5] px-2 py-0.5 text-xs font-semibold text-[#5A4737]">{selected?.category || 'General'}</span>
+							<span className="font-mono text-sm font-bold text-slate-800">{selected?.issueNumber}</span>
+							<span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{selected?.category || 'General'}</span>
 						</div>
-						<h3 className="mb-2 text-base font-bold leading-snug text-[#2E2016]">
+						<h3 className="mb-2 text-base font-bold leading-snug text-slate-900">
 							{selected?.title ?? selected?.summary ?? 'Reported issue'}
 						</h3>
 						{/* Detail: full description — gives the admin the complete context */}
-						<div className="rounded-xl border border-[#E7DBCF] bg-[#FAF6F2] p-3">
-							<p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#9D8A78]">Full Report</p>
-							<p className="text-sm leading-relaxed text-[#624F3E]">{selected?.summary ?? 'Select an issue to review details.'}</p>
+						<div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+							<p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Full Report</p>
+							<p className="text-sm leading-relaxed text-slate-700">{selected?.summary ?? 'Select an issue to review details.'}</p>
 						</div>
 					</div>
 
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-						<div className="overflow-hidden rounded-xl border border-[#E2D6C9] bg-[#D9CFC0] flex items-center justify-center" style={{minHeight: '10rem'}}>
+						<div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 flex items-center justify-center" style={{minHeight: '10rem'}}>
 							{selected?.images && selected.images.length > 0 ? (
 								<img
 									src={selected.images[0].image}
@@ -586,27 +585,27 @@ const OrganizationAdminDashboardPage = () => {
 									onError={(e) => { e.currentTarget.style.display = 'none'; }}
 								/>
 							) : (
-								<p className="text-sm text-[#8E7E6D]">No images provided</p>
+								<p className="text-sm text-slate-500">No images provided</p>
 							)}
 						</div>
 
-						<div className="rounded-xl border border-[#E2D6C9] bg-[#EFE7DD] p-4 text-center">
-							<MapPin className="mx-auto text-[#7C624D]" size={22} />
-							<p className="mt-2 font-semibold text-[#5A4737]">{selected?.location ?? 'Location unavailable'}</p>
-							<p className="text-xs text-[#9D8A78]">Lat: {selected?.lat ?? 'N/A'}, Lng: {selected?.lng ?? 'N/A'}</p>
-							<button onClick={openDirections} className="mt-3 rounded-full border border-[#DCCDBE] bg-[#F9F6F2] px-4 py-1 text-xs font-semibold text-[#6D5A48]">
+						<div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
+							<MapPin className="mx-auto text-slate-500" size={22} />
+							<p className="mt-2 font-semibold text-slate-700">{selected?.location ?? 'Location unavailable'}</p>
+							<p className="text-xs text-slate-500">Lat: {selected?.lat ?? 'N/A'}, Lng: {selected?.lng ?? 'N/A'}</p>
+							<button onClick={openDirections} className="mt-3 rounded-full border border-slate-200 bg-white px-4 py-1 text-xs font-semibold text-slate-600">
 								Get Directions
 							</button>
 						</div>
 
-						<div className="rounded-xl border border-[#E2D6C9] bg-[#F8F3ED] p-3">
-							<h4 className="mb-1 text-sm font-semibold text-[#4B392B]">Reporter Info</h4>
-							<p className="text-sm font-semibold text-[#3E2D20]">{selected.reporter ?? 'Unknown reporter'}</p>
-							<p className="text-xs text-[#8E7B6A]">{selected.reporterPhone ?? 'No contact details available'}</p>
+						<div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+							<h4 className="mb-1 text-sm font-semibold text-slate-800">Reporter Info</h4>
+							<p className="text-sm font-semibold text-slate-900">{selected.reporter ?? 'Unknown reporter'}</p>
+							<p className="text-xs text-slate-500">{selected.reporterPhone ?? 'No contact details available'}</p>
 						</div>
 					</div>
 
-					<div className="mt-auto flex items-center gap-2 rounded-xl border border-[#E0D4C7] bg-[#F8F3ED] p-2">
+					<div className="mt-auto flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
 						<input
 							placeholder="Type an internal note or message to the citizen..."
 							value={note}
@@ -614,7 +613,7 @@ const OrganizationAdminDashboardPage = () => {
 							className="flex-1 bg-transparent px-2 text-sm outline-none"
 						/>
 						<button
-							className="rounded-full bg-[#6A4834] p-2 text-white disabled:opacity-40"
+							className="rounded-full bg-secondary p-2 text-white disabled:opacity-40"
 							disabled={!note.trim()}
 							onClick={sendNote}
 							title="Send note"
@@ -624,15 +623,15 @@ const OrganizationAdminDashboardPage = () => {
 						</button>
 					</div>
 					{selected?.internalNotes && (
-						<div className="mt-3 rounded-xl border border-[#E0D4C7] bg-[#F8F3ED] p-3 text-xs text-[#624F3E]">
-							<h4 className="mb-1 font-semibold text-[#4B392B]">Previous Notes:</h4>
+						<div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+							<h4 className="mb-1 font-semibold text-slate-800">Previous Notes:</h4>
 							<pre className="whitespace-pre-wrap font-sans">{selected.internalNotes}</pre>
 						</div>
 					)}
 				</div>
 
 				{selected?.reopenReason ? (
-					<div className="mb-3 rounded-xl border border-[#E6C1AE] bg-[#FFF4EC] p-3 text-xs text-[#7C3A1D]">
+					<div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
 						<strong className="block text-[11px] uppercase tracking-[0.2em]">Reopen Reason</strong>
 						<span className="mt-2 block">{selected.reopenReason}</span>
 					</div>
@@ -641,28 +640,28 @@ const OrganizationAdminDashboardPage = () => {
 
 			{statusModal ? (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-					<div className="w-full max-w-lg rounded-3xl border border-[#E2D6C9] bg-[#FCF8F2] p-5 shadow-2xl">
+					<div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
 						<div className="mb-4">
-							<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#8E7A69]">{statusModalHeading}</p>
-							<h3 className="mt-1 text-2xl font-black text-[#3E2B1F]">{statusModal.ticket.issueNumber}</h3>
-							<p className="mt-1 text-sm text-[#6B5646]">Current status: <span className="font-semibold text-[#3E2A1E]">{formatStatusLabel(statusModal.ticket.status)}</span></p>
-							<p className="text-sm text-[#6B5646]">New status: <span className="font-semibold text-[#3E2A1E]">{formatStatusLabel(statusModal.nextStatus)}</span></p>
+							<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">{statusModalHeading}</p>
+							<h3 className="mt-1 text-2xl font-black text-slate-900">{statusModal.ticket.issueNumber}</h3>
+							<p className="mt-1 text-sm text-slate-500">Current status: <span className="font-semibold text-slate-900">{formatStatusLabel(statusModal.ticket.status)}</span></p>
+							<p className="text-sm text-slate-500">New status: <span className="font-semibold text-slate-900">{formatStatusLabel(statusModal.nextStatus)}</span></p>
 						</div>
 						<label className="block">
-							<span className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-[#8B7868]">{statusModalFieldLabel}</span>
+							<span className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{statusModalFieldLabel}</span>
 							<textarea
 								value={statusModal.note}
 								onChange={(e) => setStatusModal((prev) => prev ? { ...prev, note: e.target.value } : prev)}
 								rows={5}
 								placeholder={statusModalPlaceholder}
-								className="w-full rounded-2xl border border-[#DCCFC1] bg-white px-4 py-3 text-sm text-[#4A3628] outline-none focus:border-[#C9A78A]"
+								className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-400"
 							/>
 						</label>
 						<div className="mt-5 flex items-center justify-end gap-2">
-							<button type="button" onClick={closeStatusModal} className="rounded-full border border-[#D8CCBD] bg-white px-4 py-2 text-sm font-semibold text-[#6D5A48]">
+							<button type="button" onClick={closeStatusModal} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600">
 								Cancel
 							</button>
-							<button type="button" onClick={confirmStatusModal} className="rounded-full bg-[#6A4834] px-4 py-2 text-sm font-semibold text-white">
+							<button type="button" onClick={confirmStatusModal} className="rounded-full bg-secondary px-4 py-2 text-sm font-semibold text-white">
 								Confirm
 							</button>
 						</div>

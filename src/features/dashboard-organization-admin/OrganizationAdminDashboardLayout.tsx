@@ -75,13 +75,13 @@ const OrganizationAdminDashboardLayout = () => {
     <button
       type="button"
       onClick={() => navigate('/dashboard/notifications')}
-      className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#E0D3C4] bg-white shadow-sm transition hover:border-[#C9A78A]"
+      className="relative flex h-11 w-11 items-center justify-center rounded-full border border-black/5 bg-white shadow-sm transition hover:border-black/20"
       title="Open notifications"
       aria-label={unreadCount > 0 ? `Open notifications, ${unreadCount} unread` : 'Open notifications'}
     >
-      <Bell size={16} className="text-[#8B7767]" />
+      <Bell size={16} className="text-slate-500" />
       {unreadCount > 0 ? (
-        <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-[#EE3E4A] px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-md">
+        <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-md">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       ) : null}
@@ -89,7 +89,7 @@ const OrganizationAdminDashboardLayout = () => {
   );
 
   return (
-  <div className="flex h-screen overflow-hidden bg-[#F6F2EA]">
+  <div className="flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(144,107,51,0.08),_transparent_28%),linear-gradient(180deg,_#fdfbf7_0%,_#f7f7f7_100%)] text-slate-700">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <button 
@@ -112,15 +112,15 @@ const OrganizationAdminDashboardLayout = () => {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Desktop Header — centered, self-expanding rounded pill */}
-        <header className="hidden md:grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-4 border-b border-[#E2D6C8] px-6 py-4 z-30 shrink-0 bg-transparent">
+        <header className="hidden md:grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-4 border-b border-black/5 px-6 py-4 z-30 shrink-0 bg-white/35 backdrop-blur-xl">
           <div />
-          <div className="inline-flex min-w-md max-w-160 items-center gap-4 rounded-full border border-[#E0D3C4] bg-white px-6 py-3 shadow-sm">
-            <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-[#6E4B33]/10 text-[#6E4B33]">
+          <div className="inline-flex min-w-md max-w-160 items-center gap-4 rounded-full border border-black/5 bg-white px-6 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+            <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-secondary/10 text-secondary">
               <Building2 size={20} />
             </div>
             <div className="min-w-0 text-left">
-              <h1 className="text-base font-black leading-tight text-[#3E2B1F] whitespace-normal wrap-break-word">{currentOrgName}</h1>
-              <p className="text-[11px] font-bold text-[#9A8070] mt-0.5 uppercase tracking-wider">{pageName}</p>
+              <h1 className="text-base font-black leading-tight text-slate-900 whitespace-normal wrap-break-word">{currentOrgName}</h1>
+              <p className="text-[11px] font-bold text-slate-500 mt-0.5 uppercase tracking-wider">{pageName}</p>
             </div>
           </div>
           <div className="justify-self-end">{notificationsButton}</div>
@@ -128,27 +128,27 @@ const OrganizationAdminDashboardLayout = () => {
             <button
               type="button"
               onClick={() => setProfileOpen((open) => !open)}
-              className="flex items-center gap-2 rounded-full border border-[#E0D3C4] bg-white px-3 py-2 shadow-sm transition hover:border-[#C9A78A]"
+              className="flex items-center gap-2 rounded-full border border-black/5 bg-white px-3 py-2 shadow-sm transition hover:border-secondary/30"
               title="Open organization profile menu"
               aria-label="Open organization profile menu"
               aria-haspopup="menu"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#7D5A42] text-sm font-bold text-[#F8EFE4]">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-sm font-bold text-white">
                 {orgInitials}
               </span>
-              <ChevronDown size={16} className="text-[#8B7767]" />
+              <ChevronDown size={16} className="text-slate-500" />
             </button>
 
             {profileOpen ? (
-              <div className="absolute right-0 top-full mt-3 w-72 overflow-hidden rounded-3xl border border-[#E0D3C4] bg-white shadow-2xl">
+              <div className="absolute right-0 top-full mt-3 w-72 overflow-hidden rounded-3xl border border-black/5 bg-white shadow-2xl">
                 <div className="p-4">
-                  <p className="text-lg font-black leading-tight text-[#3E2B1F]">{currentOrgName}</p>
-                  <p className="mt-1 text-sm text-[#8A7767] break-all">{currentOrgEmail}</p>
-                  <span className="mt-3 inline-block rounded bg-[#8B674E] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#F8EFE4]">
+                  <p className="text-lg font-black leading-tight text-slate-900">{currentOrgName}</p>
+                  <p className="mt-1 text-sm text-slate-500 break-all">{currentOrgEmail}</p>
+                  <span className="mt-3 inline-block rounded bg-secondary px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
                     Organization Admin
                   </span>
                 </div>
-                <div className="border-t border-[#EAE0D3]" />
+                <div className="border-t border-black/5" />
                 <button
                   type="button"
                   onClick={async () => {
@@ -156,7 +156,7 @@ const OrganizationAdminDashboardLayout = () => {
                     await logout();
                   }}
                   title="Logout"
-                  className="flex w-full items-center gap-2 bg-[#6E4B33] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#5A3A29]"
+                  className="flex w-full items-center gap-2 bg-secondary px-4 py-3 text-sm font-semibold text-white transition hover:bg-secondary/90"
                 >
                   <LogOut size={14} />
                   Logout
@@ -167,22 +167,22 @@ const OrganizationAdminDashboardLayout = () => {
         </header>
 
         {/* Mobile Header — hamburger left, org pill centered */}
-        <header className="md:hidden flex items-center gap-2 border-b border-[#E2D6C8] px-4 py-3 z-30 shrink-0 bg-transparent">
+        <header className="md:hidden flex items-center gap-2 border-b border-black/5 px-4 py-3 z-30 shrink-0 bg-white/35 backdrop-blur-xl">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="shrink-0 p-1.5 text-[#6E4B33] hover:bg-white/50 rounded-lg transition"
+            className="shrink-0 p-1.5 text-secondary hover:bg-white/70 rounded-lg transition"
             title="Open sidebar"
             aria-label="Open sidebar"
           >
             <Menu size={22} />
           </button>
-          <div className="inline-flex min-w-0 flex-1 items-center gap-3 rounded-full border border-[#E0D3C4] bg-white px-4 py-2 shadow-sm">
-            <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-[#6E4B33]/10 text-[#6E4B33]">
+          <div className="inline-flex min-w-0 flex-1 items-center gap-3 rounded-full border border-black/5 bg-white px-4 py-2 shadow-sm">
+            <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-secondary/10 text-secondary">
               <Building2 size={16} />
             </div>
             <div className="min-w-0 text-left flex-1">
-              <p className="text-sm font-bold text-[#3E2B1F] leading-tight wrap-break-word">{currentOrgName}</p>
-              <p className="text-[10px] font-bold text-[#9A8070] mt-0.5 uppercase tracking-wider">{pageName}</p>
+              <p className="text-sm font-bold text-slate-900 leading-tight wrap-break-word">{currentOrgName}</p>
+              <p className="text-[10px] font-bold text-slate-500 mt-0.5 uppercase tracking-wider">{pageName}</p>
             </div>
           </div>
           {notificationsButton}
@@ -190,26 +190,26 @@ const OrganizationAdminDashboardLayout = () => {
             <button
               type="button"
               onClick={() => setProfileOpen((open) => !open)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E0D3C4] bg-white shadow-sm"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-black/5 bg-white shadow-sm"
               title="Open organization profile menu"
               aria-label="Open organization profile menu"
               aria-haspopup="menu"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7D5A42] text-xs font-bold text-[#F8EFE4]">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-bold text-white">
                 {orgInitials}
               </span>
             </button>
 
             {profileOpen ? (
-              <div className="absolute right-0 top-full mt-3 w-72 overflow-hidden rounded-3xl border border-[#E0D3C4] bg-white shadow-2xl">
+              <div className="absolute right-0 top-full mt-3 w-72 overflow-hidden rounded-3xl border border-black/5 bg-white shadow-2xl">
                 <div className="p-4">
-                  <p className="text-lg font-black leading-tight text-[#3E2B1F]">{currentOrgName}</p>
-                  <p className="mt-1 text-sm text-[#8A7767] break-all">{currentOrgEmail}</p>
-                  <span className="mt-3 inline-block rounded bg-[#8B674E] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#F8EFE4]">
+                  <p className="text-lg font-black leading-tight text-slate-900">{currentOrgName}</p>
+                  <p className="mt-1 text-sm text-slate-500 break-all">{currentOrgEmail}</p>
+                  <span className="mt-3 inline-block rounded bg-secondary px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
                     Organization Admin
                   </span>
                 </div>
-                <div className="border-t border-[#EAE0D3]" />
+                <div className="border-t border-black/5" />
                 <button
                   type="button"
                   onClick={async () => {
@@ -217,7 +217,7 @@ const OrganizationAdminDashboardLayout = () => {
                     await logout();
                   }}
                   title="Logout"
-                  className="flex w-full items-center gap-2 bg-[#6E4B33] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#5A3A29]"
+                  className="flex w-full items-center gap-2 bg-secondary px-4 py-3 text-sm font-semibold text-white transition hover:bg-secondary/90"
                 >
                   <LogOut size={14} />
                   Logout
