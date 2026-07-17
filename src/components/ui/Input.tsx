@@ -13,8 +13,7 @@ const Input = ({ label, error, ...props }: InputProps) => {
       </label>
       <input
         {...props}
-        className="w-full bg-transparent border-b border-secondary/10 py-3 px-1 text-secondary font-light text-md 
-                   placeholder:text-secondary/30 focus:outline-none focus:border-secondary transition-colors"
+        className="w-full bg-transparent border-b border-secondary/10 py-3 px-1 text-slate-800 font-light text-md placeholder:text-slate-400 focus:outline-none focus:border-secondary transition-colors"
       />
       {error && (
         <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest mt-1">

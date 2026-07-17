@@ -6,28 +6,25 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
 }
 
-export const Button: React.FC<ButtonProps> = ({ 
-  children, 
-  variant = 'primary', 
+export const Button: React.FC<ButtonProps> = ({
+  children,
+  variant = 'primary',
   isLoading,
-  className = '', 
-  ...props 
+  className = '',
+  ...props
 }) => {
-  
-  const baseStyles = "font-header text-sm  lg:text-lg text-center my-3 px-6 py-2.5 rounded-full font-bold transition-all active:scale-95 cursor-pointer";
-  
-  const variantStyles = variant === 'primary' 
-    ? 'bg-secondary text-primary hover:bg-secondary/90 shadow-md' 
-    : 'bg-primary text-secondary border border-secondary/20 hover:bg-secondary/5';
+  const baseStyles = 'font-header text-sm lg:text-lg text-center my-3 px-6 py-2.5 rounded-full font-bold transition-all active:scale-95 cursor-pointer';
+
+  const variantStyles =
+    variant === 'primary'
+      ? 'bg-secondary text-white hover:bg-secondary/90 shadow-[0_18px_40px_rgba(144,107,51,0.22)]'
+      : 'bg-white text-secondary border border-secondary/15 hover:bg-secondary/5';
 
   return (
-    <button 
-      className={`${baseStyles} ${variantStyles} ${className}`} 
-      {...props}
-    >
+    <button className={`${baseStyles} ${variantStyles} ${className}`} {...props}>
       {isLoading ? (
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           <span>Processing...</span>
         </div>
       ) : (
