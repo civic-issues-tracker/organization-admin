@@ -213,9 +213,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // If we get a 401 and we're NOT already logging out, trigger logout
         if (axiosError.response?.status === 401 && !isLoggingOut.current) {
-          // Set the flag immediately to prevent other in-flight 401s from
-          // triggering additional logout calls
-          isLoggingOut.current = true;
+          // The logout function manages the isLoggingOut flag internally to 
+          // prevent duplicate calls, so we just call it directly.
           await logout();
         }
 
