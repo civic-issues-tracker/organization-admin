@@ -45,6 +45,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Use a Ref to track if we are already in the middle of a logout
   const isLoggingOut = useRef(false);
+  // Track whether initial hydration has already run (prevents re-trigger loop)
+  const hasHydrated = useRef(false);
 
   const showToast = useCallback((msg: string, type: ToastType) => {
     setToast({ show: true, msg, type });
@@ -83,6 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('refreshToken');
     }
 
+    // Allow hydration to re-run after a fresh login
+    hasHydrated.current = false;
     setIsLoading(false);
   }, []);
 
@@ -106,8 +110,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [clearAuthStorage]);
 
+  // Hydrate session exactly once on mount — no dependency on user/accessToken
+  // to avoid the infinite re-render loop when a 401 clears them.
   useEffect(() => {
+    // Only run hydration once per app lifecycle
+    if (hasHydrated.current) return;
+    hasHydrated.current = true;
+
     let isMounted = true;
+
+    // If there is no stored token at all, skip the network call entirely
+    const storedToken = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+    if (!storedToken) {
+      setIsLoading(false);
+      return;
+    }
 
     const hydrateSession = async () => {
       try {
@@ -119,11 +136,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         if (!isMounted) return;
-        if (user || accessToken) {
-          setAccessToken(null);
-          setUser(null);
-          clearAuthStorage();
-        }
+        // Token is invalid/expired — clear everything once, no loop
+        setAccessToken(null);
+        setUser(null);
+        clearAuthStorage();
         console.warn('Failed to hydrate auth session', error);
       } finally {
         if (isMounted) {
@@ -137,12 +153,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       isMounted = false;
     };
-  }, [accessToken, clearAuthStorage, user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Hydrate the organization name — only when we have a valid user AND token
   useEffect(() => {
     let isMounted = true;
 
     const hydrateOrganizationName = async () => {
+      // Guard: don't fire if we have no token (avoids 401 after logout)
+      const storedToken = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+      if (!storedToken) return;
       if (!user || user.role_name !== 'organization_admin' || user.organization_name || !user.email) {
         return;
       }
@@ -192,6 +213,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // If we get a 401 and we're NOT already logging out, trigger logout
         if (axiosError.response?.status === 401 && !isLoggingOut.current) {
+          // Set the flag immediately to prevent other in-flight 401s from
+          // triggering additional logout calls
+          isLoggingOut.current = true;
           await logout();
         }
 
