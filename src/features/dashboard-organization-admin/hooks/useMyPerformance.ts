@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   organizationAdminIssueApi,
   type MyPerformanceResponse,
@@ -22,35 +22,18 @@ const defaultKPIs: PerformanceKPIs = {
 };
 
 export const useMyPerformance = (): UseMyPerformanceResult => {
-  const [weeklyPerformance, setWeeklyPerformance] = useState<WeeklyPerformanceDay[]>([]);
-  const [kpis, setKpis] = useState<PerformanceKPIs | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchPerformance = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data: MyPerformanceResponse = await organizationAdminIssueApi.getMyPerformance();
-      setWeeklyPerformance(data.weekly_performance ?? []);
-      setKpis(data.kpis ?? defaultKPIs);
-    } catch (err: any) {
-      console.error('Failed to fetch performance data:', err);
-      setError(err?.response?.data?.detail || 'Failed to load performance data.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPerformance();
-  }, [fetchPerformance]);
+  const { data, isLoading, error, refetch } = useQuery<MyPerformanceResponse, Error>({
+    queryKey: ['orgAdminPerformance'],
+    queryFn: async () => {
+      return await organizationAdminIssueApi.getMyPerformance();
+    },
+  });
 
   return {
-    weeklyPerformance,
-    kpis,
+    weeklyPerformance: data?.weekly_performance ?? [],
+    kpis: data?.kpis ?? defaultKPIs,
     isLoading,
-    error,
-    refresh: fetchPerformance,
+    error: error ? error.message : null,
+    refresh: () => refetch(),
   };
 };

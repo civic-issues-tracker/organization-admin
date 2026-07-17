@@ -1,15 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { organizationAdminIssueApi } from '../services/organizationAdminIssueService';
 import {
   toOrganizationAdminTicket,
   type OrganizationAdminIssue,
   type OrganizationAdminTicket,
+  type IssuePriority,
   type IssueStatus,
 } from '../organizationAdminMockData';
-
-let cachedTickets: OrganizationAdminTicket[] = [];
-let cachedResolvedTickets: OrganizationAdminTicket[] = [];
-let hasCachedIssues = false;
 
 interface UseOrganizationAdminIssuesResult {
   tickets: OrganizationAdminTicket[];
@@ -22,7 +19,7 @@ interface UseOrganizationAdminIssuesResult {
   assignUnit: (ticketId: string, unit: string) => void;
   releaseIssue: (ticketId: string, note?: string) => Promise<void>;
   escalateIssue: (ticketId: string, reason: string) => Promise<void>;
-  updatePriority: (ticketId: string, priority: string) => Promise<void>;
+  updatePriority: (ticketId: string, priority: IssuePriority) => Promise<void>;
 }
 
 const isResolvedStatus = (status: OrganizationAdminTicket['status']) => status === 'resolved';
@@ -33,248 +30,134 @@ const splitResolved = (tickets: OrganizationAdminTicket[]) => {
   return { active, resolved };
 };
 
-export const useOrganizationAdminIssues = (): UseOrganizationAdminIssuesResult => {
-  const [tickets, setTickets] = useState<OrganizationAdminTicket[]>(cachedTickets);
-  const [resolvedTickets, setResolvedTickets] = useState<OrganizationAdminTicket[]>(cachedResolvedTickets);
-  const [isLoading, setIsLoading] = useState(!hasCachedIssues);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const refresh = useCallback(() => {
-    setReloadKey((prev) => prev + 1);
-  }, []);
+export const useOrganizationAdminIssues = (_seed?: string): UseOrganizationAdminIssuesResult => {
+  const queryClient = useQueryClient();
+  const queryKey = ['orgAdminIssues'];
 
-  useEffect(() => {
-    let isActive = true;
-
-    const loadIssues = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const issues = await organizationAdminIssueApi.getAll();
-        if (!isActive) return;
-
-        const mapped = issues.map((issue: OrganizationAdminIssue) => toOrganizationAdminTicket(issue));
-        const { active, resolved } = splitResolved(mapped);
-        setTickets(active);
-        setResolvedTickets(resolved);
-        cachedTickets = active;
-        cachedResolvedTickets = resolved;
-        hasCachedIssues = true;
-      } catch (err) {
-        if (!isActive) return;
-        setError(err instanceof Error ? err.message : 'Failed to load issues from the server.');
-        setTickets([]);
-        setResolvedTickets([]);
-        cachedTickets = [];
-        cachedResolvedTickets = [];
-        hasCachedIssues = false;
-      } finally {
-        if (isActive) setIsLoading(false);
-      }
-    };
-
-    loadIssues();
-    return () => {
-      isActive = false;
-    };
-  }, [reloadKey]);
-
-  const updateStatus = useCallback(
-    async (ticketId: string, status: IssueStatus) => {
-      try {
-        const updated = await organizationAdminIssueApi.updateStatus(ticketId, status);
-        const hasFullPayload = Boolean(updated && 'issue_number' in updated);
-        const updatedTicket = hasFullPayload
-          ? toOrganizationAdminTicket(updated as OrganizationAdminIssue)
-          : null;
-
-        if (updatedTicket && isResolvedStatus(updatedTicket.status)) {
-          // Moving TO resolved: remove from active, add to resolved
-          setTickets((prev) => prev.filter((t) => t.id !== ticketId));
-          setResolvedTickets((prev) => {
-            const next = [updatedTicket, ...prev.filter((t) => t.id !== ticketId)];
-            cachedTickets = cachedTickets.filter((t) => t.id !== ticketId);
-            cachedResolvedTickets = next;
-            return next;
-          });
-        } else if (updatedTicket) {
-          // Moving AWAY from resolved (or between active statuses):
-          // remove from resolved list and ensure it exists in active list
-          setResolvedTickets((prev) => {
-            const nextResolved = prev.filter((t) => t.id !== ticketId);
-            cachedResolvedTickets = nextResolved;
-            return nextResolved;
-          });
-          setTickets((prev) => {
-            const exists = prev.some((t) => t.id === ticketId);
-            if (exists) {
-              const next = prev.map((t) => (t.id === ticketId ? updatedTicket : t));
-              cachedTickets = next;
-              return next;
-            }
-            // Ticket was in resolvedTickets — bring it back to active
-            const next = [updatedTicket, ...prev];
-            cachedTickets = next;
-            return next;
-          });
-        } else {
-          setResolvedTickets((prev) => {
-            const nextResolved = prev.filter((t) => t.id !== ticketId);
-            cachedResolvedTickets = nextResolved;
-            return nextResolved;
-          });
-          setTickets((prev) => {
-            const next = prev.map((t) => (t.id === ticketId ? { ...t, status } : t));
-            cachedTickets = next;
-            return next;
-          });
-        }
-      } catch {
-        throw new Error('Failed to update status.');
-      }
+  const { data: allTickets = [], isLoading, error, refetch } = useQuery<OrganizationAdminTicket[], Error>({
+    queryKey,
+    queryFn: async () => {
+      const issues = await organizationAdminIssueApi.getAll();
+      return issues.map((issue: OrganizationAdminIssue) => toOrganizationAdminTicket(issue));
     },
-    [],
-  );
+  });
 
-  const assignUnit = useCallback((ticketId: string, unit: string) => {
-    setTickets((prev) => {
-      const next = prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, assignedUnit: unit } : ticket));
-      cachedTickets = next;
-      return next;
+  const { active, resolved } = splitResolved(allTickets);
+
+  const statusMutation = useMutation({
+    mutationFn: async ({ ticketId, status }: { ticketId: string; status: IssueStatus }) => {
+      return await organizationAdminIssueApi.updateStatus(ticketId, status);
+    },
+    onSuccess: (updated, variables) => {
+      const hasFullPayload = Boolean(updated && 'issue_number' in updated);
+      const updatedTicket = hasFullPayload
+        ? toOrganizationAdminTicket(updated as OrganizationAdminIssue)
+        : null;
+
+      queryClient.setQueryData<OrganizationAdminTicket[]>(queryKey, (old) => {
+        if (!old) return [];
+        if (updatedTicket) {
+          const exists = old.some((t) => t.id === variables.ticketId);
+          if (exists) {
+            return old.map((t) => (t.id === variables.ticketId ? updatedTicket : t));
+          }
+          return [updatedTicket, ...old];
+        }
+        return old.map((t) => (t.id === variables.ticketId ? { ...t, status: variables.status } : t));
+      });
+    },
+  });
+
+  const notesMutation = useMutation({
+    mutationFn: async ({ ticketId, notes }: { ticketId: string; notes: string }) => {
+      return await organizationAdminIssueApi.updateInternalNotes(ticketId, notes);
+    },
+    onSuccess: (updated, variables) => {
+      const hasFullPayload = Boolean(updated && 'issue_number' in updated);
+      const updatedTicket = hasFullPayload
+        ? toOrganizationAdminTicket(updated as OrganizationAdminIssue)
+        : null;
+
+      queryClient.setQueryData<OrganizationAdminTicket[]>(queryKey, (old) => {
+        if (!old) return [];
+        if (updatedTicket) {
+          return old.map((t) => (t.id === variables.ticketId ? updatedTicket : t));
+        }
+        return old.map((t) => (t.id === variables.ticketId ? { ...t, internalNotes: variables.notes } : t));
+      });
+    },
+  });
+
+  const priorityMutation = useMutation({
+    mutationFn: async ({ ticketId, priority }: { ticketId: string; priority: IssuePriority }) => {
+      return await organizationAdminIssueApi.updatePriority(ticketId, priority);
+    },
+    onSuccess: (updated, variables) => {
+      const hasFullPayload = Boolean(updated && 'issue_number' in updated);
+      const updatedTicket = hasFullPayload
+        ? toOrganizationAdminTicket(updated as OrganizationAdminIssue)
+        : null;
+
+      queryClient.setQueryData<OrganizationAdminTicket[]>(queryKey, (old) => {
+        if (!old) return [];
+        if (updatedTicket) {
+          return old.map((t) => (t.id === variables.ticketId ? updatedTicket : t));
+        }
+        return old.map((t) => (t.id === variables.ticketId ? { ...t, priority: variables.priority } : t));
+      });
+    },
+  });
+
+  const releaseMutation = useMutation({
+    mutationFn: async ({ ticketId, note }: { ticketId: string; note?: string }) => {
+      return await organizationAdminIssueApi.release(ticketId, note);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.setQueryData<OrganizationAdminTicket[]>(queryKey, (old) => {
+        if (!old) return [];
+        return old.map((t) =>
+          t.id === variables.ticketId
+            ? { ...t, status: 'submitted', assignedAdminName: undefined }
+            : t
+        );
+      });
+    },
+  });
+
+  const escalateMutation = useMutation({
+    mutationFn: async ({ ticketId, reason }: { ticketId: string; reason: string }) => {
+      return await organizationAdminIssueApi.escalate(ticketId, reason);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.setQueryData<OrganizationAdminTicket[]>(queryKey, (old) => {
+        if (!old) return [];
+        return old.map((t) =>
+          t.id === variables.ticketId
+            ? { ...t, status: 'escalated', assignedAdminName: undefined }
+            : t
+        );
+      });
+    },
+  });
+
+  const assignUnit = (ticketId: string, unit: string) => {
+    queryClient.setQueryData<OrganizationAdminTicket[]>(queryKey, (old) => {
+      if (!old) return [];
+      return old.map((t) => (t.id === ticketId ? { ...t, assignedUnit: unit } : t));
     });
-  }, []);
-
-  const updateInternalNotes = useCallback(
-    async (ticketId: string, notes: string) => {
-      try {
-        const updated = await organizationAdminIssueApi.updateInternalNotes(ticketId, notes);
-        const hasFullPayload = Boolean(updated && 'issue_number' in updated);
-        const updatedTicket = hasFullPayload
-          ? toOrganizationAdminTicket(updated as OrganizationAdminIssue)
-          : null;
-        if (updatedTicket) {
-          setTickets((prev) => {
-            const next = prev.map((ticket) => (ticket.id === ticketId ? updatedTicket : ticket));
-            cachedTickets = next;
-            return next;
-          });
-          setResolvedTickets((prev) => {
-            const next = prev.map((ticket) => (ticket.id === ticketId ? updatedTicket : ticket));
-            cachedResolvedTickets = next;
-            return next;
-          });
-        } else {
-          setTickets((prev) => {
-            const next = prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, internalNotes: notes } : ticket));
-            cachedTickets = next;
-            return next;
-          });
-          setResolvedTickets((prev) => {
-            const next = prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, internalNotes: notes } : ticket));
-            cachedResolvedTickets = next;
-            return next;
-          });
-        }
-      } catch (err) {
-        console.error('Failed to update internal notes', err);
-        throw err;
-      }
-    },
-    []
-  );
-
-  const updatePriority = useCallback(
-    async (ticketId: string, priority: string) => {
-      try {
-        const updated = await organizationAdminIssueApi.updatePriority(ticketId, priority);
-        const hasFullPayload = Boolean(updated && 'issue_number' in updated);
-        const updatedTicket = hasFullPayload
-          ? toOrganizationAdminTicket(updated as OrganizationAdminIssue)
-          : null;
-        if (updatedTicket) {
-          setTickets((prev) => {
-            const next = prev.map((ticket) => (ticket.id === ticketId ? updatedTicket : ticket));
-            cachedTickets = next;
-            return next;
-          });
-          setResolvedTickets((prev) => {
-            const next = prev.map((ticket) => (ticket.id === ticketId ? updatedTicket : ticket));
-            cachedResolvedTickets = next;
-            return next;
-          });
-        } else {
-          setTickets((prev) => {
-            const next = prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, priority } : ticket));
-            cachedTickets = next;
-            return next;
-          });
-          setResolvedTickets((prev) => {
-            const next = prev.map((ticket) => (ticket.id === ticketId ? { ...ticket, priority } : ticket));
-            cachedResolvedTickets = next;
-            return next;
-          });
-        }
-      } catch (err) {
-        console.error('Failed to update priority', err);
-        throw err;
-      }
-    },
-    []
-  );
-
-  const releaseIssue = useCallback(
-    async (ticketId: string, note?: string) => {
-      await organizationAdminIssueApi.release(ticketId, note);
-      setTickets((prev) => {
-        const next: OrganizationAdminTicket[] = prev.map((ticket) =>
-          ticket.id === ticketId
-            ? { ...ticket, status: 'submitted', assignedAdminName: undefined }
-            : ticket
-        );
-        cachedTickets = next;
-        return next;
-      });
-      setResolvedTickets((prev) => {
-        const next = prev.filter((ticket) => ticket.id !== ticketId);
-        cachedResolvedTickets = next;
-        return next;
-      });
-    },
-    []
-  );
-
-  const escalateIssue = useCallback(
-    async (ticketId: string, reason: string) => {
-      await organizationAdminIssueApi.escalate(ticketId, reason);
-      setTickets((prev) => {
-        const next: OrganizationAdminTicket[] = prev.map((ticket) =>
-          ticket.id === ticketId
-            ? { ...ticket, status: 'escalated', assignedAdminName: undefined }
-            : ticket
-        );
-        cachedTickets = next;
-        return next;
-      });
-      setResolvedTickets((prev) => {
-        const next = prev.filter((ticket) => ticket.id !== ticketId);
-        cachedResolvedTickets = next;
-        return next;
-      });
-    },
-    []
-  );
+  };
 
   return {
-    tickets,
-    resolvedTickets,
+    tickets: active,
+    resolvedTickets: resolved,
     isLoading,
-    error,
-    refresh,
-    updateStatus,
-    updateInternalNotes,
-    releaseIssue,
-    escalateIssue,
+    error: error ? error.message : null,
+    refresh: () => refetch(),
+    updateStatus: async (ticketId, status) => { await statusMutation.mutateAsync({ ticketId, status }); },
+    updateInternalNotes: async (ticketId, notes) => { await notesMutation.mutateAsync({ ticketId, notes }); },
+    releaseIssue: async (ticketId, note) => { await releaseMutation.mutateAsync({ ticketId, note }); },
+    escalateIssue: async (ticketId, reason) => { await escalateMutation.mutateAsync({ ticketId, reason }); },
     assignUnit,
-    updatePriority,
+    updatePriority: async (ticketId, priority) => { await priorityMutation.mutateAsync({ ticketId, priority }); },
   };
 };
