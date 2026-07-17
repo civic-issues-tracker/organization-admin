@@ -89,7 +89,7 @@ const OrganizationAdminDashboardLayout = () => {
   );
 
   return (
-  <div className="flex h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(144,107,51,0.08),_transparent_28%),linear-gradient(180deg,_#fdfbf7_0%,_#f7f7f7_100%)] text-slate-700">
+  <div className="flex h-screen overflow-hidden bg-primary text-slate-700">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <button 

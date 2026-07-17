@@ -206,15 +206,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (response: AxiosResponse) => response,
       async (error) => {
         const axiosError = error as AxiosError;
+        const originalRequest = axiosError.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
         if (axiosError.response?.status === 429) {
           console.warn("Security: Too many requests. Please slow down.");
         }
 
-        // If we get a 401 and we're NOT already logging out, trigger logout
-        if (axiosError.response?.status === 401 && !isLoggingOut.current) {
-          // The logout function manages the isLoggingOut flag internally to 
-          // prevent duplicate calls, so we just call it directly.
+        // If we get a 401 and we're NOT already logging out, attempt refresh
+        if (axiosError.response?.status === 401 && originalRequest && !originalRequest._retry && !isLoggingOut.current) {
+          originalRequest._retry = true;
+          
+          try {
+            const currentRefreshToken = sessionStorage.getItem('refreshToken') || localStorage.getItem('refreshToken');
+            if (currentRefreshToken) {
+              // Note: using authService directly without circular dependency issues because it's imported at the top
+              const result = await authService.refreshToken({ refresh: currentRefreshToken });
+              if (result.access) {
+                // Update state and storage
+                setAccessToken(result.access);
+                if (localStorage.getItem('refreshToken')) {
+                  localStorage.setItem('accessToken', result.access);
+                } else {
+                  sessionStorage.setItem('accessToken', result.access);
+                }
+                
+                // Retry the original request
+                originalRequest.headers['Authorization'] = `Bearer ${result.access}`;
+                return privateApi(originalRequest);
+              }
+            }
+          } catch (refreshError) {
+            console.error("Token refresh failed", refreshError);
+          }
+
+          // If refresh failed or no refresh token, logout
           await logout();
         }
 

@@ -107,8 +107,8 @@ export const authService = {
     return response.data;
   },
 
-  refreshToken: async () => {
-    const response = await publicApi.post('/auth/token/refresh/');
+  refreshToken: async (data: { refresh: string }) => {
+    const response = await publicApi.post('/auth/token/refresh/', data);
     return response.data;
   },
 
