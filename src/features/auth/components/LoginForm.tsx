@@ -95,7 +95,7 @@ const LoginForm: React.FC = () => {
     try {
       const result = await authService.login(payload);
 
-      if (result.access && result.user) {
+      if (result?.user) {
         const role = result.user.role_name;
 
         login({
@@ -128,9 +128,6 @@ const LoginForm: React.FC = () => {
           showToast("You don't have access to the organization admin portal.", 'error');
           navigate('/login');
         }
-      } else {
-        showToast('Login failed. Missing access token.', 'error');
-        navigate('/login');
       }
     
     } catch (error: unknown) {

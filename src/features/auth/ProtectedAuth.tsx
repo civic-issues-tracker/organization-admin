@@ -24,8 +24,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-primary">
-        <div className="animate-pulse font-body text-[10px] uppercase tracking-[0.5em] text-secondary/40">
+      <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(144,107,51,0.08),_transparent_30%),linear-gradient(180deg,_#fdfbf7_0%,_#f7f7f7_100%)]">
+        <div className="rounded-full border border-white/70 bg-white/80 px-6 py-3 text-[10px] font-black uppercase tracking-[0.5em] text-secondary shadow-lg shadow-black/5 backdrop-blur-xl">
           Authenticating...
         </div>
       </div>
@@ -38,10 +38,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
 
   if (allowedRoles && user && !hasAllowedRole(user.role_name, allowedRoles)) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] p-4">
-      <div className="max-w-md w-full text-center space-y-8 p-10 bg-white rounded-[40px] shadow-2xl shadow-secondary/5 border border-secondary/5 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(144,107,51,0.08),_transparent_30%),linear-gradient(180deg,_#fdfbf7_0%,_#f7f7f7_100%)] p-4">
+      <div className="max-w-md w-full text-center space-y-8 p-10 bg-white rounded-[36px] shadow-2xl shadow-black/5 border border-black/5 relative overflow-hidden">
         
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-red-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute -top-24 -right-24 w-48 h-48 bg-secondary/5 rounded-full blur-3xl"></div>
         
         <div className="relative flex justify-center">
           <div className="w-20 h-20 bg-red-50/50 rounded-3xl flex items-center justify-center border border-red-100 animate-pulse">

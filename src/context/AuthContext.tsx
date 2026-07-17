@@ -23,9 +23,8 @@ interface AuthContextType {
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (data: { access: string; refresh?: string; user: User }) => void;
+  login: (data: { access?: string; refresh?: string; user: User }) => void;
   logout: () => Promise<void>;
-  updateToken: (newToken: string) => void;
   showToast: (msg: string, type: ToastType) => void;
 }
 
@@ -41,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState({ show: false, msg: '', type: 'info' as ToastType });
 
   // Use a Ref to track if we are already in the middle of a logout
@@ -52,16 +51,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 5000);
   }, []);
 
-  const login = useCallback((data: { access: string; refresh?: string; user: User }) => {
-    setAccessToken(data.access);
+  const clearAuthStorage = useCallback(() => {
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('user');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+  }, []);
+
+  const login = useCallback((data: { access?: string; refresh?: string; user: User }) => {
+    if (data.access) {
+      setAccessToken(data.access);
+      sessionStorage.setItem('accessToken', data.access);
+      localStorage.setItem('accessToken', data.access);
+    } else {
+      setAccessToken(null);
+      sessionStorage.removeItem('accessToken');
+      localStorage.removeItem('accessToken');
+    }
+
     setUser(data.user);
-    
-    // Persist to both sessionStorage and localStorage
-    sessionStorage.setItem('accessToken', data.access);
     sessionStorage.setItem('user', JSON.stringify(data.user));
-    localStorage.setItem('accessToken', data.access);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
+
     if (data.refresh) {
       sessionStorage.setItem('refreshToken', data.refresh);
       localStorage.setItem('refreshToken', data.refresh);
@@ -69,48 +82,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionStorage.removeItem('refreshToken');
       localStorage.removeItem('refreshToken');
     }
-    
+
     setIsLoading(false);
   }, []);
 
-  const updateToken = useCallback((newToken: string) => {
-    setAccessToken(newToken);
-    sessionStorage.setItem('accessToken', newToken);
-  }, []);
-
   const logout = useCallback(async () => {
-  if (isLoggingOut.current) return;
-  isLoggingOut.current = true;
+    if (isLoggingOut.current) return;
+    isLoggingOut.current = true;
 
-  try {
-    const refreshToken = sessionStorage.getItem('refreshToken') || localStorage.getItem('refreshToken');
+    try {
+      await authService.logout();
+    } catch {
+      console.warn('Server logout request failed, clearing local session anyway.');
+    } finally {
+      setAccessToken(null);
+      setUser(null);
+      clearAuthStorage();
 
-    if (refreshToken) {
-      await privateApi.post('/auth/logout/', { refresh: refreshToken });
-    } else {
-      await privateApi.post('/auth/logout/');
+      setToast({ show: true, msg: 'Logged out successfully.', type: 'success' });
+      setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 4000);
+      isLoggingOut.current = false;
+      setIsLoading(false);
     }
-  } catch  {
-    console.warn("Server logout request failed (expected if token expired)");
-  } finally {
-    // Clear all auth state
-    setAccessToken(null);
-    setUser(null);
-    
-    // Clear from both storage locations
-    sessionStorage.removeItem('accessToken');
-    sessionStorage.removeItem('refreshToken');
-    sessionStorage.removeItem('user');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+  }, [clearAuthStorage]);
 
-    setToast({ show: true, msg: 'Logged out successfully.', type: 'success' });
-    setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 4000);
-    
-    isLoggingOut.current = false;
-  }
-}, []);
+  useEffect(() => {
+    let isMounted = true;
+
+    const hydrateSession = async () => {
+      try {
+        const profile = await authService.getProfile();
+        if (!isMounted) return;
+
+        if (profile) {
+          setUser(profile);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        if (user || accessToken) {
+          setAccessToken(null);
+          setUser(null);
+          clearAuthStorage();
+        }
+        console.warn('Failed to hydrate auth session', error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void hydrateSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [accessToken, clearAuthStorage, user]);
 
   useEffect(() => {
     let isMounted = true;
@@ -181,13 +208,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const contextValue = useMemo(() => ({
     user,
     accessToken,
-    isAuthenticated: !!accessToken,
+    isAuthenticated: !!user,
     isLoading,
     login,
     logout,
-    updateToken,
     showToast,
-  }), [user, accessToken, isLoading, login, logout, updateToken, showToast]);
+  }), [user, accessToken, isLoading, login, logout, showToast]);
 
   return (
     <AuthContext.Provider value={contextValue}>

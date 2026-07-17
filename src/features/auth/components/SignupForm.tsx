@@ -121,7 +121,7 @@ const SignupForm: React.FC = () => {
         otp_code: otpCode
       });
 
-        if (result.access && result.user) {
+        if (result.user) {
         triggerToast("Identity verified! Access granted.", "success");
         
         setTimeout(() => {
