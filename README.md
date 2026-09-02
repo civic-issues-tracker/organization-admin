@@ -73,6 +73,7 @@ Uses JWT authentication with refresh tokens. API requests configured via `VITE_A
 npm run lint
 ```
 
+
 ## License
 
 Civic Issues Tracker Project
