@@ -3,6 +3,7 @@ import { privateApi } from '../features/auth/services/authService';
 import { authService } from '../features/auth/services/authService';
 import Toast, { type ToastType } from '../components/ui/Toast'; 
 import { AxiosError, type InternalAxiosRequestConfig, type AxiosResponse } from 'axios';
+import { useQueryClient } from '@tanstack/react-query';
 
 export interface User {
   id: string;
@@ -53,6 +54,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 5000);
   }, []);
 
+  const queryClient = useQueryClient();
+
   const clearAuthStorage = useCallback(() => {
     sessionStorage.removeItem('accessToken');
     sessionStorage.removeItem('refreshToken');
@@ -60,7 +63,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-  }, []);
+    // Clear React Query persistent cache to prevent data leakage between accounts
+    localStorage.removeItem('CIVIC_TRACKER_ORG_CACHE');
+    // Clear in-memory query cache
+    queryClient.clear();
+  }, [queryClient]);
 
   const login = useCallback((data: { access?: string; refresh?: string; user: User }) => {
     if (data.access) {
