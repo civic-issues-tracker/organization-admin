@@ -27,6 +27,13 @@ let cachedNotifications: NotificationItem[] = [];
 let cachedUnreadCount = 0;
 let hasCachedNotifications = false;
 
+export const clearNotificationsCache = () => {
+	cachedNotifications = [];
+	cachedUnreadCount = 0;
+	hasCachedNotifications = false;
+	globalThis.dispatchEvent(new Event(NOTIFICATION_SYNC_EVENT));
+};
+
 export const useNotifications = (options: UseNotificationsOptions = {}) => {
 	const { refreshIntervalMs = 30000, refreshOnFocus = true } = options;
 	const [notifications, setNotifications] = useState<NotificationItem[]>(cachedNotifications);

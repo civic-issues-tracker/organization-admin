@@ -11,7 +11,7 @@ const OrganizationAdminDashboardLayout = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const { user, logout } = useAuth();
   const { unreadCount } = useNotifications();
-  const { tickets, resolvedTickets } = useOrganizationAdminIssues(user?.email ?? user?.id ?? user?.full_name);
+  const { tickets, resolvedTickets } = useOrganizationAdminIssues(user?.id ?? user?.email);
   const location = useLocation();
   const navigate = useNavigate();
   const desktopProfileRef = useRef<HTMLDivElement | null>(null);

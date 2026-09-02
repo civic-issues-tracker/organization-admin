@@ -36,17 +36,20 @@ const localStoragePersister: Persister = {
 persistQueryClient({
   queryClient,
   persister: localStoragePersister,
+  // Discard the previous cache format, which used shared query keys across
+  // organization accounts.
+  buster: 'organization-admin-cache-v2',
   maxAge: 1000 * 60 * 60 * 24, // Keep the offline storage backup valid for 24 hours
 });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-      <AuthProvider>
-        <LocationProvider>
-          <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <LocationProvider>
             <App />
-          </QueryClientProvider>
-        </LocationProvider>
-      </AuthProvider>
+          </LocationProvider>
+        </AuthProvider>
+      </QueryClientProvider>
   </StrictMode>,
 )

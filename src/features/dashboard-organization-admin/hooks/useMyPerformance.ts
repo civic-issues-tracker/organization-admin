@@ -21,9 +21,10 @@ const defaultKPIs: PerformanceKPIs = {
   avg_resolve_time_days: 0,
 };
 
-export const useMyPerformance = (): UseMyPerformanceResult => {
+export const useMyPerformance = (accountId?: string): UseMyPerformanceResult => {
   const { data, isLoading, error, refetch } = useQuery<MyPerformanceResponse, Error>({
-    queryKey: ['orgAdminPerformance'],
+    queryKey: ['orgAdminPerformance', accountId ?? 'unauthenticated'],
+    enabled: Boolean(accountId),
     queryFn: async () => {
       return await organizationAdminIssueApi.getMyPerformance();
     },

@@ -19,9 +19,9 @@ const hasValidLocation = (ticket: { lat?: number; lng?: number }) => {
 // ── component ──────────────────────────────────────────────────────────────
 const OrganizationAdminIssuesPage = () => {
 	const { user, showToast } = useAuth();
-	const seed = user?.email ?? user?.id ?? user?.full_name;
+	const accountId = user?.id ?? user?.email;
 	const [searchQuery, setSearchQuery] = useState('');
-	const { tickets, resolvedTickets, isLoading, error } = useOrganizationAdminIssues(seed);
+	const { tickets, resolvedTickets, isLoading, error } = useOrganizationAdminIssues(accountId);
 
 	const allTickets = tickets.concat(resolvedTickets);
 	const ticketsWithoutLocation = allTickets.filter((ticket) => !hasValidLocation({ lat: ticket.lat, lng: ticket.lng }));
