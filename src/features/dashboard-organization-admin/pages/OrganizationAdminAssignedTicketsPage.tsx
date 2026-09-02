@@ -15,8 +15,8 @@ const formatStatusLabel = (status?: OrganizationAdminTicket['status']) => {
 
 const OrganizationAdminAssignedTicketsPage = () => {
   const { user, showToast } = useAuth();
-  const seed = user?.email ?? user?.id ?? user?.full_name;
-  const { tickets, resolvedTickets, isLoading, updateStatus, updateInternalNotes } = useOrganizationAdminIssues(seed);
+  const accountId = user?.id ?? user?.email;
+  const { tickets, resolvedTickets, isLoading, updateStatus, updateInternalNotes } = useOrganizationAdminIssues(accountId);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');

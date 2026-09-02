@@ -30,12 +30,13 @@ const splitResolved = (tickets: OrganizationAdminTicket[]) => {
   return { active, resolved };
 };
 
-export const useOrganizationAdminIssues = (_seed?: string): UseOrganizationAdminIssuesResult => {
+export const useOrganizationAdminIssues = (accountId?: string): UseOrganizationAdminIssuesResult => {
   const queryClient = useQueryClient();
-  const queryKey = ['orgAdminIssues'];
+  const queryKey = ['orgAdminIssues', accountId ?? 'unauthenticated'] as const;
 
   const { data: allTickets = [], isLoading, error, refetch } = useQuery<OrganizationAdminTicket[], Error>({
     queryKey,
+    enabled: Boolean(accountId),
     queryFn: async () => {
       const issues = await organizationAdminIssueApi.getAll();
       return issues.map((issue: OrganizationAdminIssue) => toOrganizationAdminTicket(issue));

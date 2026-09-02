@@ -4,6 +4,7 @@ import { authService } from '../features/auth/services/authService';
 import Toast, { type ToastType } from '../components/ui/Toast'; 
 import { AxiosError, type InternalAxiosRequestConfig, type AxiosResponse } from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
+import { clearNotificationsCache } from '../hooks/useNotifications';
 
 export interface User {
   id: string;
@@ -48,6 +49,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isLoggingOut = useRef(false);
   // Track whether initial hydration has already run (prevents re-trigger loop)
   const hasHydrated = useRef(false);
+  // LoginForm updates the organization label after sign-in. This ref prevents
+  // that second update from clearing the just-created account cache.
+  const activeAccountId = useRef<string | null>(user?.id ?? null);
 
   const showToast = useCallback((msg: string, type: ToastType) => {
     setToast({ show: true, msg, type });
@@ -56,6 +60,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const queryClient = useQueryClient();
 
+  const clearQueryCache = useCallback(() => {
+    localStorage.removeItem('CIVIC_TRACKER_ORG_CACHE');
+    queryClient.clear();
+    clearNotificationsCache();
+  }, [queryClient]);
+
   const clearAuthStorage = useCallback(() => {
     sessionStorage.removeItem('accessToken');
     sessionStorage.removeItem('refreshToken');
@@ -63,13 +73,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-    // Clear React Query persistent cache to prevent data leakage between accounts
-    localStorage.removeItem('CIVIC_TRACKER_ORG_CACHE');
-    // Clear in-memory query cache
-    queryClient.clear();
-  }, [queryClient]);
+    // Clear persisted and in-memory data to prevent leakage between accounts.
+    clearQueryCache();
+    activeAccountId.current = null;
+  }, [clearQueryCache]);
 
   const login = useCallback((data: { access?: string; refresh?: string; user: User }) => {
+    // The ticket and performance queries are account-scoped. Clear every
+    // existing cache before accepting a different account in this browser.
+    if (activeAccountId.current !== data.user.id) {
+      clearQueryCache();
+      activeAccountId.current = data.user.id;
+    }
+
     if (data.access) {
       setAccessToken(data.access);
       sessionStorage.setItem('accessToken', data.access);
@@ -95,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Allow hydration to re-run after a fresh login
     hasHydrated.current = false;
     setIsLoading(false);
-  }, []);
+  }, [clearQueryCache]);
 
   const logout = useCallback(async () => {
     if (isLoggingOut.current) return;

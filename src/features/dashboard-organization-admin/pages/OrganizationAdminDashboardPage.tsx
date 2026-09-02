@@ -65,9 +65,10 @@ const getStatusModalPlaceholder = (mode: StatusModalMode) => {
 const OrganizationAdminDashboardPage = () => {
 	const { user, showToast } = useAuth();
 	const navigate = useNavigate();
+	const accountId = user?.id ?? user?.email;
 	const [searchQuery, setSearchQuery] = useState('');
-	const { tickets, resolvedTickets, isLoading, error, updateStatus, updateInternalNotes, releaseIssue, escalateIssue, updatePriority } = useOrganizationAdminIssues();
-	const { weeklyPerformance: rawWeeklyPerformance } = useMyPerformance();
+	const { tickets, resolvedTickets, isLoading, error, updateStatus, updateInternalNotes, releaseIssue, escalateIssue, updatePriority } = useOrganizationAdminIssues(accountId);
+	const { weeklyPerformance: rawWeeklyPerformance } = useMyPerformance(accountId);
 	const [showResolved, setShowResolved] = useState(false);
 	const [showAllActiveTickets, setShowAllActiveTickets] = useState(false);
 	const [statusModal, setStatusModal] = useState<StatusModalState | null>(null);
