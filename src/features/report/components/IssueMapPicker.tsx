@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMapEvents } from 'react-leaflet';
+import React, { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useTranslation } from 'react-i18next'; // Added
 import 'leaflet/dist/leaflet.css';
@@ -19,6 +19,16 @@ const createLocationIcon = (color: string, isUser: boolean = false) => {
     iconAnchor: [15, 30], 
     popupAnchor: [0, -30]
   });
+};
+
+const iconCache = new Map<string, L.DivIcon>();
+
+const getMemoizedLocationIcon = (color: string, isUser: boolean = false) => {
+  const key = `${color}-${isUser}`;
+  if (!iconCache.has(key)) {
+    iconCache.set(key, createLocationIcon(color, isUser));
+  }
+  return iconCache.get(key)!;
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -55,6 +65,21 @@ const MapEvents = ({ onLocationSelect }: { onLocationSelect?: (lat: number, lng:
   return null;
 };
 
+// Smoothly re-centers map view whenever selectedLocation changes
+const MapRecenter = ({ location }: { location?: { lat: number; lng: number } | null }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (location) {
+      map.flyTo([location.lat, location.lng], 15, {
+        animate: true,
+        duration: 1.2,
+      });
+    }
+  }, [location, map]);
+
+  return null;
+};
 
 const IssueMapPicker: React.FC<MapProps> = ({ reports, onLocationSelect, selectedLocation }) => {
   const { t } = useTranslation(); 
@@ -72,18 +97,19 @@ const IssueMapPicker: React.FC<MapProps> = ({ reports, onLocationSelect, selecte
         className="h-full w-full z-0"
         scrollWheelZoom={true}
       >
-        {/* Map tiles are configured via VITE_MAP_TILE_URL in .env */}
         <TileLayer
-          url={import.meta.env.VITE_MAP_TILE_URL}
+          url={import.meta.env.VITE_MAP_TILE_URL || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          maxZoom={20}
         />
 
         <MapEvents onLocationSelect={onLocationSelect} />
+        <MapRecenter location={selectedLocation ?? null} />
 
         {selectedLocation && (
           <Marker 
             position={[selectedLocation.lat, selectedLocation.lng]} 
-            icon={createLocationIcon('#3b82f6', true)}
+            icon={getMemoizedLocationIcon('#3b82f6', true)}
           >
             <Tooltip direction="top" offset={[0, -30]} opacity={1} permanent>
               <div className="p-1">
@@ -100,7 +126,7 @@ const IssueMapPicker: React.FC<MapProps> = ({ reports, onLocationSelect, selecte
             <Marker 
               key={report.id}
               position={[report.location_lat, report.location_long]} 
-              icon={createLocationIcon(STATUS_COLORS[report.status] || '#000')}
+              icon={getMemoizedLocationIcon(STATUS_COLORS[report.status] || '#000')}
             >
               <Popup>
                 <div className="p-1 min-w-30">
