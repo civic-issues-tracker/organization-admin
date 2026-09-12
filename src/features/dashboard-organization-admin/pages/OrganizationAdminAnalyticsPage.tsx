@@ -6,8 +6,8 @@ import { useOrganizationAdminIssues } from '../hooks/useOrganizationAdminIssues'
 
 const OrganizationAdminAnalyticsPage = () => {
 	const { user } = useAuth();
-	const seed = user?.email ?? user?.id ?? user?.full_name;
-	const { tickets, resolvedTickets, isLoading } = useOrganizationAdminIssues(seed);
+	const accountId = user?.id ?? user?.email;
+	const { tickets, resolvedTickets, isLoading } = useOrganizationAdminIssues(accountId);
 	const [activeReportId, setActiveReportId] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [reportFilter, setReportFilter] = useState('');
