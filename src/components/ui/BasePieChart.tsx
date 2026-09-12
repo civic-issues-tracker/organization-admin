@@ -1,29 +1,25 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 interface PieData {
   name: string;
   value: number;
   color: string;
+  displayPercentage?: number;
 }
 
 interface BasePieChartProps {
   data?: PieData[]; 
 }
 
-const BasePieChart: React.FC<BasePieChartProps> = ({ data: overridingData }) => {
-  // Balanced data parameters mapping exactly to the layout regions
-  const [chartData, setChartData] = useState<PieData[]>([
-    { name: 'Power Grid Infrastructure', value: 40, color: '#2C0901' }, 
-    { name: 'Roads & Bridges', value: 25, color: '#A06A50' },          
-    { name: 'Water Supply', value: 20, color: '#D4A373' },             
-    { name: 'Telecomm. Networks', value: 15, color: '#FAEDCD' },        
-  ]);
+const defaultChartData: PieData[] = [
+  { name: 'Power Grid Infrastructure', value: 40, color: '#2C0901' },
+  { name: 'Roads & Bridges', value: 25, color: '#A06A50' },
+  { name: 'Water Supply', value: 20, color: '#D4A373' },
+  { name: 'Telecomm. Networks', value: 15, color: '#FAEDCD' },
+];
 
-  useEffect(() => {
-    if (overridingData) {
-      setChartData(overridingData);
-    }
-  }, [overridingData]);
+const BasePieChart: React.FC<BasePieChartProps> = ({ data: overridingData }) => {
+  const chartData = overridingData ?? defaultChartData;
 
   const total = chartData.reduce((sum, item) => sum + item.value, 0);
 
@@ -32,9 +28,6 @@ const BasePieChart: React.FC<BasePieChartProps> = ({ data: overridingData }) => 
   const center = size / 2;
   const outerRadius = 90;
   const innerRadius = 55;
-
-  // Track operational cumulative angles
-  let currentAngle = 0;
 
   // Custom sort to ensure the slider legend below reads: Telecomm -> Water -> Roads -> Power Grid
   const legendOrder = chartData && chartData.length > 0 
@@ -56,6 +49,9 @@ const BasePieChart: React.FC<BasePieChartProps> = ({ data: overridingData }) => 
           {chartData.map((item, index) => {
             const percentage = total > 0 ? (item.value / total) * 100 : 0;
             const angleExtent = (percentage / 100) * 360;
+            const currentAngle = total > 0
+              ? (chartData.slice(0, index).reduce((sum, segment) => sum + segment.value, 0) / total) * 360
+              : 0;
 
             // Compute structural geometry coordinate points for the current slice path arc
             const startAngleRad = ((currentAngle - 90) * Math.PI) / 180;
@@ -91,9 +87,6 @@ const BasePieChart: React.FC<BasePieChartProps> = ({ data: overridingData }) => 
             const textX = center + labelRadius * Math.cos(midAngleRad);
             const textY = center + labelRadius * Math.sin(midAngleRad);
 
-            // Increment the angle for the next loop iteration
-            currentAngle += angleExtent;
-
             const isLightBackground = item.name.includes("Telecomm");
 
             return (
@@ -116,7 +109,7 @@ const BasePieChart: React.FC<BasePieChartProps> = ({ data: overridingData }) => 
                     dominantBaseline="central"
                     className="pointer-events-none font-sans tracking-tight"
                   >
-                    {(item as any).displayPercentage ?? Math.round(item.value || 0)}%
+                    {item.displayPercentage ?? Math.round(item.value || 0)}%
                   </text>
               </g>
             );
