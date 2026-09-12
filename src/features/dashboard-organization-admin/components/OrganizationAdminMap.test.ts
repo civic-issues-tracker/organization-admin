@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type L from 'leaflet';
 import { formatStatusLabel, getPinIcon, getStatusTone, iconCache } from './organizationAdminMapUtils';
 
 describe('OrganizationAdminMap performance and helpers', () => {
