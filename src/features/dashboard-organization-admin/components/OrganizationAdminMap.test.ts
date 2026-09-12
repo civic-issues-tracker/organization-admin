@@ -1,17 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import type L from 'leaflet';
+import { formatStatusLabel, getPinIcon, getStatusTone, iconCache } from './organizationAdminMapUtils';
 
 describe('OrganizationAdminMap performance and helpers', () => {
-  let getPinIcon: any;
-  let getStatusTone: any;
-  let formatStatusLabel: any;
-  let iconCache: any;
-
-  beforeEach(async () => {
-    const mod = await import('./OrganizationAdminMap');
-    getPinIcon = mod.getPinIcon;
-    getStatusTone = mod.getStatusTone;
-    formatStatusLabel = mod.formatStatusLabel;
-    iconCache = mod.iconCache;
+  beforeEach(() => {
     iconCache.clear();
   });
 
