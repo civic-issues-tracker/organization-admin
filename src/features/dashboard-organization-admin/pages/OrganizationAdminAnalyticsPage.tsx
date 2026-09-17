@@ -16,6 +16,8 @@ const formatDateTime = (value?: string) => {
 		: date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 };
 
+const formatStatus = (status: string) => status.replaceAll('_', ' ');
+
 const OrganizationAdminAnalyticsPage = () => {
 	const { user } = useAuth();
 	const accountId = user?.id ?? user?.email;
@@ -24,7 +26,11 @@ const OrganizationAdminAnalyticsPage = () => {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [reportFilter, setReportFilter] = useState('');
 	const [showFilterInput, setShowFilterInput] = useState(false);
-	const { data: activeReport } = useQuery({
+	const {
+		data: activeReport,
+		isLoading: isLoadingReport,
+		error: activeReportError,
+	} = useQuery({
 		queryKey: ['orgAdminIssueDetail', accountId ?? 'unauthenticated', activeReportId],
 		enabled: Boolean(accountId && activeReportId),
 		queryFn: async () => toOrganizationAdminTicket(
@@ -72,12 +78,6 @@ const OrganizationAdminAnalyticsPage = () => {
 		() => filterResolvedReports(myResolvedTickets, searchQuery, reportFilter),
 		[myResolvedTickets, reportFilter, searchQuery],
 	);
-
-	const activeReportEntry = useMemo(
-		() => filteredReports.find((ticket) => ticket.id === activeReportId) ?? null,
-		[activeReportId, filteredReports],
-	);
-	const selectedResolvedTicket = activeReport ?? activeReportEntry;
 
 	if (isLoading && myResolvedTickets.length === 0) {
 		return (
@@ -148,87 +148,56 @@ const OrganizationAdminAnalyticsPage = () => {
 					</div>
 				</div>
 
-				<div className="grid gap-4 xl:grid-cols-[1.5fr_0.9fr]">
-					<div className="overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm">
-						<div className="flex items-center justify-between border-b border-black/5 bg-slate-50 px-4 py-3">
-							<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Resolved cases</p>
-							<span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">{filteredReports.length} total</span>
-						</div>
-						<div className="divide-y divide-black/5">
-							{filteredReports.map((ticket) => {
-								const isSelected = activeReportId === ticket.id;
-								return (
-									<button
-										type="button"
-										key={ticket.id}
-										onClick={() => setActiveReportId(ticket.id)}
-										className={`flex w-full items-start justify-between gap-3 px-4 py-4 text-left transition ${isSelected ? 'bg-slate-50' : 'hover:bg-slate-50/80'}`}
-									>
-										<div className="min-w-0 flex-1">
-											<p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{ticket.issueNumber}</p>
-											<h4 className="mt-1 text-base font-bold text-slate-900">{ticket.title}</h4>
-											<p className="mt-1 line-clamp-2 text-sm text-slate-600">{ticket.summary || ticket.location}</p>
-										</div>
-										<div className="shrink-0 text-right">
-											<span className="inline-flex rounded-full bg-secondary/10 px-2 py-1 text-[10px] font-semibold text-secondary">{ticket.category || 'Uncategorized'}</span>
-											<p className="mt-2 text-[11px] font-medium text-slate-500">{formatDateTime(ticket.resolutionDate)}</p>
-										</div>
-									</button>
-								);
-							})}
-							{filteredReports.length === 0 ? (
-								<div className="px-4 py-8 text-sm text-slate-500">No resolved tickets match your search or filter.</div>
-							) : null}
-						</div>
-					</div>
-
-					<div className="rounded-2xl border border-black/5 bg-white p-4 shadow-sm">
-						{selectedResolvedTicket ? (
-							<>
-								<div className="mb-4 flex items-start justify-between gap-3">
-									<div>
-										<p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Resolution report</p>
-										<h3 className="mt-1 text-2xl font-black text-slate-900">{selectedResolvedTicket.issueNumber}</h3>
-									</div>
-									<button onClick={() => setActiveReportId('')} className="rounded-full border border-slate-200 p-2 text-slate-500" aria-label="Close report">
-										<X size={14} />
-									</button>
-								</div>
-								<div className="space-y-4">
-									<div>
-										<p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Issue</p>
-										<h4 className="mt-1 text-lg font-bold text-slate-900">{selectedResolvedTicket.title}</h4>
-										<p className="mt-1 text-sm text-slate-600">{selectedResolvedTicket.location}</p>
-									</div>
-									<div className="rounded-2xl border border-black/5 bg-slate-50 p-3">
-										<p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Summary</p>
-										<p className="mt-2 text-sm text-slate-700">{selectedResolvedTicket.summary || 'No summary was recorded for this ticket.'}</p>
-									</div>
-									<div className="grid grid-cols-2 gap-2 text-sm">
-										<div className="rounded-xl border border-black/5 bg-slate-50 p-3">
-											<p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Resolved</p>
-											<p className="mt-1 font-semibold text-slate-900">{formatDateTime(selectedResolvedTicket.resolutionDate)}</p>
-										</div>
-										<div className="rounded-xl border border-black/5 bg-slate-50 p-3">
-											<p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Category</p>
-											<p className="mt-1 font-semibold text-slate-900">{selectedResolvedTicket.category || 'Not recorded'}</p>
-										</div>
-									</div>
-									{selectedResolvedTicket.internalNotes ? (
-										<div className="rounded-2xl border border-black/5 bg-slate-50 p-3">
-											<p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Admin notes</p>
-											<p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selectedResolvedTicket.internalNotes}</p>
-										</div>
-									) : null}
-								</div>
-							</>
-						) : (
-							<div className="flex min-h-[240px] items-center justify-center text-sm text-slate-500">
-								Select a resolved ticket to view its report.
-							</div>
-						)}
-					</div>
+				<div className="overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm">
+					<table className="w-full text-left text-sm">
+						<thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+							<tr>
+								<th className="px-4 py-3">Ticket ID</th>
+								<th className="px-4 py-3">Issue Description</th>
+								<th className="px-4 py-3">Category</th>
+								<th className="px-4 py-3">Resolution Date</th>
+								<th className="px-4 py-3">Action</th>
+							</tr>
+						</thead>
+						<tbody>
+							{filteredReports.map((ticket) => (
+								<tr key={ticket.id} className="border-t border-black/5 text-slate-700">
+									<td className="px-4 py-3 font-bold">{ticket.issueNumber}</td>
+									<td className="px-4 py-3 font-semibold">{ticket.title}</td>
+									<td className="px-4 py-3"><span className="rounded-full bg-secondary/10 px-2 py-1 text-xs text-secondary">{ticket.category}</span></td>
+									<td className="px-4 py-3 text-slate-500">{formatDateTime(ticket.resolutionDate)}</td>
+									<td className="px-4 py-3"><button onClick={() => setActiveReportId(ticket.id)} className="rounded-full border border-black/5 px-3 py-1 text-xs font-semibold text-slate-700">View Report</button></td>
+								</tr>
+							))}
+							{filteredReports.length === 0 ? <tr><td className="px-4 py-6 text-sm text-slate-500" colSpan={5}>No resolved tickets match your search or filter.</td></tr> : null}
+						</tbody>
+					</table>
 				</div>
+
+				{activeReportId ? (
+					<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="resolution-report-title">
+						<div className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+							<div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 p-5">
+								<div>
+									<p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-500">Resolution Report</p>
+									<h3 id="resolution-report-title" className="mt-1 text-2xl font-black text-slate-900">{activeReport?.issueNumber ?? activeReportId}</h3>
+								</div>
+								<button onClick={() => setActiveReportId('')} className="rounded-full border border-slate-200 bg-slate-50 p-2 text-slate-500 hover:bg-slate-100" aria-label="Close report"><X size={16} /></button>
+							</div>
+							<div className="min-h-0 overflow-y-auto p-5">
+								{isLoadingReport ? <div className="flex min-h-48 items-center justify-center"><ThemeLoader size="md" /></div> : activeReport ? (
+									<div className="grid gap-3 md:grid-cols-2">
+										<div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4"><p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Issue</p><p className="mt-2 text-lg font-bold text-slate-900">{activeReport.title}</p><p className="mt-1 text-sm text-slate-500">{activeReport.location}</p><p className="mt-3 text-sm text-slate-700">{activeReport.summary}</p></div>
+										<div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4"><p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Resolution</p><p className="mt-2 text-lg font-bold text-slate-900">{formatDateTime(activeReport.resolutionDate)}</p><p className="mt-1 text-sm text-slate-500">Category: {activeReport.category || 'Not recorded'}</p></div>
+										{activeReport.internalNotes ? <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 md:col-span-2"><p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Organization Admin Notes</p><p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{activeReport.internalNotes}</p></div> : null}
+										{activeReport.images?.length ? <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 md:col-span-2"><p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Photos</p><div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">{activeReport.images.map((image) => <img key={image.id} src={image.image_url || image.image} alt={`Issue ${activeReport.issueNumber}`} className="h-28 w-full rounded-xl object-cover" />)}</div></div> : null}
+										{activeReport.statusHistory?.length ? <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 md:col-span-2"><p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Status Timeline</p><ul className="mt-3 space-y-3">{activeReport.statusHistory.map((entry, index) => <li key={`${entry.changed_at}-${index}`} className="border-l-2 border-secondary/30 pl-3 text-sm text-slate-700"><p className="font-semibold capitalize">{formatStatus(entry.old_status)} → {formatStatus(entry.new_status)}</p><p className="text-xs text-slate-500">{formatDateTime(entry.changed_at)}{entry.changed_by_name ? ` · ${entry.changed_by_name}` : ''}</p>{entry.note ? <p className="mt-1 whitespace-pre-wrap">{entry.note}</p> : null}</li>)}</ul></div> : null}
+									</div>
+								) : <p className="py-8 text-center text-sm text-red-600">{activeReportError?.message || 'The resolved ticket could not be loaded.'}</p>}
+							</div>
+						</div>
+					</div>
+				) : null}
 			</div>
 		</section>
 	);
