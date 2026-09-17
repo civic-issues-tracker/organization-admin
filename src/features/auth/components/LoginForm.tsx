@@ -12,6 +12,21 @@ import { authService } from '../../../features/auth/services/authService';
 import Toast, {  type ToastType } from '../../../components/ui/Toast';
 import { isOrganizationAdminRole } from '../../../lib/roleUtils';
 
+const normalizeEthiopianPhone = (value: string) => {
+  const clean = value.replace(/[\s\-()]/g, '');
+  if (clean.startsWith('+251')) return clean;
+  if (clean.startsWith('251')) return `+${clean}`;
+  if (clean.startsWith('0') && clean.length === 10) return `+251${clean.slice(1)}`;
+  if ((clean.startsWith('9') || clean.startsWith('7')) && clean.length === 9) return `+251${clean}`;
+  return clean;
+};
+
+const getResetErrorMessage = (error: unknown) => {
+  if (!axios.isAxiosError(error)) return 'Unable to send reset instructions. Check your connection and try again.';
+  const data = error.response?.data as { error?: string; detail?: string } | undefined;
+  return data?.error || data?.detail || 'Unable to send reset instructions. Please try again.';
+};
+
 const loginSchema = z.object({
   identifier: z.string().min(1, "Phone or Email is required"),
   password: z.string().min(1, "Password is required"),
@@ -49,6 +64,7 @@ const LoginForm: React.FC = () => {
     
     if (forgotMethod === 'email' && !forgotIdentifier.includes('@')) {
       showToast("Please enter a valid email address.", "error");
+      return;
     }
     if (forgotMethod === 'sms' && forgotIdentifier.length < 9) {
       showToast("Please enter a valid phone number.", "error");
@@ -57,14 +73,17 @@ const LoginForm: React.FC = () => {
 
     setLoading(true);
     try {
+      const formattedIdentifier = forgotMethod === 'sms'
+        ? normalizeEthiopianPhone(forgotIdentifier)
+        : forgotIdentifier.trim();
       const payload = forgotMethod === 'email' 
-        ? { email: forgotIdentifier } 
-        : { phone: forgotIdentifier };
+        ? { email: formattedIdentifier }
+        : { phone: formattedIdentifier };
 
       const result = await authService.forgotPassword(payload); 
       
       const successMsg = forgotMethod === 'email' 
-        ? "Reset link sent to your email!" 
+        ? "If an account matches this email, reset instructions will be sent."
         : "OTP code sent to your phone!";
       
       showToast(successMsg, "success");
@@ -74,10 +93,10 @@ const LoginForm: React.FC = () => {
           showToast("Reset session not returned by server. Try again.", "error");
           return;
         }
-        setTimeout(() => navigate(`/reset-password?temp_id=${result.temp_id}&phone=${forgotIdentifier}`), 2000);
+        setTimeout(() => navigate(`/reset-password?temp_id=${result.temp_id}`), 2000);
       }
-    } catch  {
-      showToast("User not found or request failed.", "error");
+    } catch (error: unknown) {
+      showToast(getResetErrorMessage(error), "error");
     } finally {
       setLoading(false);
     }

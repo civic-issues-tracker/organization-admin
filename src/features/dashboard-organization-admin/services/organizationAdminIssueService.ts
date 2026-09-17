@@ -6,6 +6,10 @@ export const organizationAdminIssueApi = {
     const response = await privateApi.get('/issues/');
     return response.data as OrganizationAdminIssue[];
   },
+  getById: async (id: string): Promise<OrganizationAdminIssue> => {
+    const response = await privateApi.get(`/issues/${id}/`);
+    return response.data as OrganizationAdminIssue;
+  },
   updateStatus: async (id: string, status: IssueStatus): Promise<Partial<OrganizationAdminIssue>> => {
     const formData = new FormData();
     formData.append('status', status);
