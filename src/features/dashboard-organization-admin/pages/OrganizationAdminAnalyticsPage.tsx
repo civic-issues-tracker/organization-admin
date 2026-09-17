@@ -1,8 +1,21 @@
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Search, X } from 'lucide-react';
 import ThemeLoader from '../../../components/ui/ThemeLoader';
 import { useAuth } from '../../../hooks/useAuth';
 import { useOrganizationAdminIssues } from '../hooks/useOrganizationAdminIssues';
+import { toOrganizationAdminTicket } from '../organizationAdminMockData';
+import { organizationAdminIssueApi } from '../services/organizationAdminIssueService';
+
+const formatDateTime = (value?: string) => {
+	if (!value) return 'Not recorded';
+	const date = new Date(value);
+	return Number.isNaN(date.getTime())
+		? 'Not recorded'
+		: date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+};
+
+const formatStatus = (status: string) => status.replaceAll('_', ' ');
 
 const OrganizationAdminAnalyticsPage = () => {
 	const { user } = useAuth();
@@ -12,6 +25,17 @@ const OrganizationAdminAnalyticsPage = () => {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [reportFilter, setReportFilter] = useState('');
 	const [showFilterInput, setShowFilterInput] = useState(false);
+	const {
+		data: activeReport,
+		isLoading: isLoadingReport,
+		error: activeReportError,
+	} = useQuery({
+		queryKey: ['orgAdminIssueDetail', accountId ?? 'unauthenticated', activeReportId],
+		enabled: Boolean(accountId && activeReportId),
+		queryFn: async () => toOrganizationAdminTicket(
+			await organizationAdminIssueApi.getById(activeReportId as string),
+		),
+	});
 
 	const currentEmail = (user?.email || '').trim().toLowerCase();
 	const currentFullName = (user?.full_name || '').trim().toLowerCase();
@@ -85,10 +109,6 @@ const OrganizationAdminAnalyticsPage = () => {
 			);
 		});
 	}, [reportFilter, searchQuery, myResolvedTickets]);
-
-	const activeReport = activeReportId
-		? filteredReports.find((ticket) => ticket.id === activeReportId) ?? myResolvedTickets.find((ticket) => ticket.id === activeReportId) ?? null
-		: null;
 
 	if (isLoading && myResolvedTickets.length === 0) {
 		return (
@@ -178,7 +198,7 @@ const OrganizationAdminAnalyticsPage = () => {
 									<td className="px-4 py-3">
 										<span className="rounded-full bg-secondary/10 px-2 py-1 text-xs text-secondary">{ticket.category}</span>
 									</td>
-									<td className="px-4 py-3 text-slate-500">{ticket.resolutionDate}</td>
+									<td className="px-4 py-3 text-slate-500">{formatDateTime(ticket.resolutionDate)}</td>
 									<td className="px-4 py-3">
 										<button
 											onClick={() => setActiveReportId(ticket.id)}
@@ -198,36 +218,67 @@ const OrganizationAdminAnalyticsPage = () => {
 					</table>
 				</div>
 
-				{activeReport ? (
+				{activeReportId ? (
 					<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
 						<div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
 							<div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-3">
 								<div>
 									<p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-500">Resolution Report</p>
-									<h3 className="mt-1 text-2xl font-black text-slate-900">{activeReport.issueNumber}</h3>
+									<h3 className="mt-1 text-2xl font-black text-slate-900">{activeReport?.issueNumber ?? activeReportId}</h3>
 								</div>
 								<button onClick={() => setActiveReportId('')} className="rounded-full border border-slate-200 bg-slate-50 p-2 text-slate-500 hover:bg-slate-100" aria-label="Close report">
 									<X size={16} />
 								</button>
 							</div>
-							<div className="mt-4 grid gap-3 md:grid-cols-2">
-								<div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
-									<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Issue</p>
+							{isLoadingReport ? (
+								<div className="flex min-h-48 items-center justify-center"><ThemeLoader size="md" /></div>
+							) : activeReport ? (
+								<div className="mt-4 grid gap-3 md:grid-cols-2">
+									<div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
+										<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Issue</p>
 										<p className="mt-2 text-lg font-bold text-slate-900">{activeReport.title}</p>
-									<p className="mt-1 text-sm text-slate-500">{activeReport.location}</p>
+										<p className="mt-1 text-sm text-slate-500">{activeReport.location}</p>
+										<p className="mt-3 text-sm text-slate-700">{activeReport.summary}</p>
+									</div>
+									<div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
+										<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Resolution</p>
+										<p className="mt-2 text-lg font-bold text-slate-900">{formatDateTime(activeReport.resolutionDate)}</p>
+										<p className="mt-1 text-sm text-slate-500">Category: {activeReport.category || 'Not recorded'}</p>
+									</div>
+									{activeReport.internalNotes ? (
+										<div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 md:col-span-2">
+											<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Organization Admin Notes</p>
+											<p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{activeReport.internalNotes}</p>
+										</div>
+									) : null}
+									{activeReport.images?.length ? (
+										<div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 md:col-span-2">
+											<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Photos</p>
+											<div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+												{activeReport.images.map((image) => (
+													<img key={image.id} src={image.image_url || image.image} alt={`Issue ${activeReport.issueNumber}`} className="h-28 w-full rounded-xl object-cover" />
+												))}
+											</div>
+										</div>
+									) : null}
+									{activeReport.statusHistory?.length ? (
+										<div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 md:col-span-2">
+											<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Status Timeline</p>
+											<ul className="mt-3 space-y-3">
+												{activeReport.statusHistory.map((entry, index) => (
+													<li key={`${entry.changed_at}-${index}`} className="border-l-2 border-secondary/30 pl-3 text-sm text-slate-700">
+														<p className="font-semibold capitalize">{formatStatus(entry.old_status)} → {formatStatus(entry.new_status)}</p>
+														<p className="text-xs text-slate-500">{formatDateTime(entry.changed_at)}{entry.changed_by_name ? ` · ${entry.changed_by_name}` : ''}</p>
+														{entry.note ? <p className="mt-1 whitespace-pre-wrap">{entry.note}</p> : null}
+													</li>
+												))}
+											</ul>
+										</div>
+									) : null}
 								</div>
-								<div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
-									<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Resolution</p>
-									<p className="mt-2 text-lg font-bold text-slate-900">{activeReport.resolutionDate}</p>
-									<p className="mt-1 text-sm text-slate-500">Category: {activeReport.category}</p>
-								</div>
-								<div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 md:col-span-2">
-									<p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">Organization Admin Notes</p>
-									<p className="mt-2 text-sm text-slate-700">
-										This report view is currently driven by organization-admin dashboard data. When backend reports are available, this panel should open the resolved issue record with photos, timeline, crew assignments, and public feedback.
-									</p>
-								</div>
-							</div>
+							) : (
+								<p className="py-8 text-center text-sm text-red-600">{activeReportError?.message || 'The resolved ticket could not be loaded.'}</p>
+							)}
 						</div>
 					</div>
 				) : null}

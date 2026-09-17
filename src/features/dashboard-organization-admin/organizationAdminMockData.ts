@@ -25,11 +25,18 @@ export interface OrganizationAdminIssue {
   location_lat?: number | null;
   location_long?: number | null;
   created_at: string;
+  resolved_at?: string | null;
   // list API returns a single Cloudinary URL; detail API returns the full images[]
   image_url?: string | null;
-  images?: { id: string; image: string; created_at: string }[];
+  images?: { id: string; image: string; image_url?: string | null; created_at: string }[];
   internal_notes?: string;
-  status_history?: { old: string; new: string; date: string; note?: string }[];
+  status_history?: {
+    old_status: string;
+    new_status: string;
+    changed_by_name?: string | null;
+    changed_at: string;
+    note?: string | null;
+  }[];
 }
 
 export interface OrganizationAdminTicket {
@@ -53,7 +60,8 @@ export interface OrganizationAdminTicket {
   lng?: number;
   createdAt?: string;
   internalNotes?: string;
-  images?: { id: string; image: string; created_at: string }[];
+  images?: { id: string; image: string; image_url?: string | null; created_at: string }[];
+  statusHistory?: OrganizationAdminIssue['status_history'];
 }
 
 export interface OrganizationAdminMessage {
@@ -203,11 +211,13 @@ export const toOrganizationAdminTicket = (issue: OrganizationAdminIssue): Organi
   reporter: issue.resident_name,
   reporterPhone: issue.resident_phone,
   category: issue.category_name,
+  resolutionDate: issue.resolved_at ?? undefined,
   timeAgo: buildTimeAgo(issue.created_at),
   createdAt: issue.created_at,
   lat: issue.location_lat ?? undefined,
   lng: issue.location_long ?? undefined,
   internalNotes: issue.internal_notes,
+  statusHistory: issue.status_history,
   // Prefer the images[] array (from detail API); fall back to the single image_url from list API
   images: issue.images ?? (
     issue.image_url
@@ -332,4 +342,3 @@ export const chatThreads: OrganizationAdminConversation[] = [
     ],
   },
 ];
-
