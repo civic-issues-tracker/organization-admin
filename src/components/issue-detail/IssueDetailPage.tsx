@@ -68,7 +68,8 @@ const IssueDetailPage = () => {
             try {
                 const response = await privateApi.get(`/issues/${id}/`);
                 setIssue(response.data);
-            } catch (err: any) {
+            } catch (error) {
+                const err = error as {response?: {data?: {detail?: string}}};
                 console.error('Error loading issue detail:', err);
                 setError(err?.response?.data?.detail || 'Unable to load issue detail.');
             } finally {

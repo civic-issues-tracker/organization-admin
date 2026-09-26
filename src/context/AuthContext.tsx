@@ -145,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // If there is no stored token at all, skip the network call entirely
     const storedToken = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
     if (!storedToken) {
-      setIsLoading(false);
+      setTimeout(() => setIsLoading(false), 0);
       return;
     }
 

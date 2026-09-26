@@ -22,7 +22,7 @@ export const buildResolvedKpis = (
 
   const avgTimeDays = ticketsWithTime > 0
     ? `${(totalResolveTimeMs / ticketsWithTime / (1000 * 60 * 60 * 24)).toFixed(1)}d`
-    : '0.0d';
+    : 'Not available';
 
   return [
     { label: 'Total Resolved', value: myResolvedTickets.length.toString() },

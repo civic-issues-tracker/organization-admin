@@ -70,7 +70,8 @@ const OrganizationAdminAssignedTicketsPage = () => {
     try {
       await updateStatus(ticket.id, newStatus);
       showToast(`Status updated to ${formatStatusLabel(newStatus)}`, 'success');
-    } catch (err: any) {
+    } catch (error) {
+      const err = error as Error;
       showToast(err.message || 'Failed to update status', 'error');
     }
   };
@@ -84,7 +85,8 @@ const OrganizationAdminAssignedTicketsPage = () => {
       await updateInternalNotes(ticket.id, newNote);
       showToast('Note added successfully', 'success');
       setNoteText('');
-    } catch (err: any) {
+    } catch (error) {
+      const err = error as Error;
       showToast(err.message || 'Failed to add note', 'error');
     }
   };

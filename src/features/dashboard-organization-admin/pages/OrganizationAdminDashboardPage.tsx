@@ -512,21 +512,30 @@ const OrganizationAdminDashboardPage = () => {
 					</div>
 
 					<div className="mb-3 flex flex-wrap gap-2">
-						{(['submitted', 'in_progress', 'resolved', 'rejected'] as const).map((status) => (
-							<button
-								type="button"
-								key={status}
-								onClick={() => setIssueStatus(status)}
-								disabled={selected.status === status || isLockedByOther}
-								className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-									selected.status === status
-										? 'border-slate-300 bg-slate-100 text-slate-800'
-										: 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+						{(['submitted', 'in_progress', 'resolved', 'rejected'] as const).map((status) => {
+							// BUG-007 fix: backend rejects direct transitions from resolved/rejected (HTTP 403).
+							// Disable all non-current buttons when ticket is in a terminal state.
+							const isTerminal = selected.status === 'resolved' || selected.status === 'rejected';
+							const isCurrent = selected.status === status;
+							return (
+								<button
+									type="button"
+									key={status}
+									onClick={() => setIssueStatus(status)}
+									disabled={isCurrent || isLockedByOther || isTerminal}
+									title={isTerminal && !isCurrent ? `Cannot transition from ${selected.status} directly` : undefined}
+									className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+										isCurrent
+											? 'border-slate-300 bg-slate-100 text-slate-800'
+											: isTerminal
+											? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
+											: 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
 								}`}
-							>
-								Set {formatStatusLabel(status)}
-							</button>
-						))}
+								>
+									Set {formatStatusLabel(status)}
+								</button>
+							);
+						})}
 					</div>
 
 					<div className="mb-3 flex flex-wrap items-center gap-2 text-xs">

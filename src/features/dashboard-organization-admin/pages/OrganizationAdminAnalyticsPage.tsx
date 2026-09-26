@@ -9,10 +9,10 @@ import { buildResolvedKpis, filterResolvedReports } from '../organizationAdminAn
 import { organizationAdminIssueApi } from '../services/organizationAdminIssueService';
 
 const formatDateTime = (value?: string) => {
-	if (!value) return 'Not recorded';
+	if (!value) return 'Data unavailable';
 	const date = new Date(value);
 	return Number.isNaN(date.getTime())
-		? 'Not recorded'
+		? 'Data unavailable'
 		: date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 };
 

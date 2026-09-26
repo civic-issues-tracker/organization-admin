@@ -50,4 +50,15 @@ describe('organization admin analytics helpers', () => {
     expect(results).toHaveLength(1);
     expect(results[0].issueNumber).toBe('CIV-1001');
   });
+
+  it('does not report zero days when resolved timestamps are missing', () => {
+    const kpis = buildResolvedKpis([
+      {
+        ...tickets[0],
+        resolutionDate: undefined,
+      },
+    ], []);
+
+    expect(kpis[1]).toEqual({ label: 'Avg Resolve Time', value: 'Not available' });
+  });
 });

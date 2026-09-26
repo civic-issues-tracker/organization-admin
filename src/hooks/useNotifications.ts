@@ -77,7 +77,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
 		} finally {
 			setIsLoading(false);
 		}
-	}, [fetchUnreadCount]);
+	}, [fetchUnreadCount, emitSync]);
 
 	const markRead = useCallback(async (notificationIds: string[]) => {
 		if (notificationIds.length === 0) return;
@@ -89,7 +89,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
 		});
 		await fetchUnreadCount();
 		emitSync();
-	}, [fetchUnreadCount]);
+	}, [fetchUnreadCount, emitSync]);
 
 	const markAllRead = useCallback(async () => {
 		await privateApi.post('/notifications/mark-read/', { read_all: true });
@@ -100,10 +100,10 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
 		});
 		await fetchUnreadCount();
 		emitSync();
-	}, [fetchUnreadCount]);
+	}, [fetchUnreadCount, emitSync]);
 
 	useEffect(() => {
-		fetchNotifications();
+		setTimeout(() => fetchNotifications(), 0);
 	}, [fetchNotifications]);
 
 	useEffect(() => {
