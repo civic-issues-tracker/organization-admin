@@ -211,7 +211,10 @@ export const toOrganizationAdminTicket = (issue: OrganizationAdminIssue): Organi
   reporter: issue.resident_name,
   reporterPhone: issue.resident_phone,
   category: issue.category_name,
-  resolutionDate: issue.resolved_at ?? undefined,
+  resolutionDate: issue.resolved_at ?? issue.status_history
+    ?.filter((entry) => entry.new_status === 'resolved')
+    .sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime())[0]
+    ?.changed_at,
   timeAgo: buildTimeAgo(issue.created_at),
   createdAt: issue.created_at,
   lat: issue.location_lat ?? undefined,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildResolvedKpis, filterResolvedReports } from './organizationAdminAnalyticsUtils';
+import { toOrganizationAdminTicket } from './organizationAdminMockData';
 
 describe('organization admin analytics helpers', () => {
   const tickets = [
@@ -60,5 +61,23 @@ describe('organization admin analytics helpers', () => {
     ], []);
 
     expect(kpis[1]).toEqual({ label: 'Avg Resolve Time', value: 'Not available' });
+  });
+
+  it('uses the latest resolved status-history timestamp when resolved_at is absent', () => {
+    const ticket = toOrganizationAdminTicket({
+      id: '3',
+      issue_number: 'CIV-1003',
+      title: 'Resolved issue',
+      description: 'Resolved issue',
+      priority: 'Low',
+      status: 'resolved',
+      location_address: 'Bole',
+      created_at: '2026-01-01T00:00:00Z',
+      status_history: [
+        { old_status: 'submitted', new_status: 'resolved', changed_at: '2026-01-03T12:00:00Z' },
+      ],
+    });
+
+    expect(ticket.resolutionDate).toBe('2026-01-03T12:00:00Z');
   });
 });

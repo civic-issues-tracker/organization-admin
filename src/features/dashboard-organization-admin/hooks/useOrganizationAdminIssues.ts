@@ -30,6 +30,28 @@ const splitResolved = (tickets: OrganizationAdminTicket[]) => {
   return { active, resolved };
 };
 
+const hydrateResolvedIssueDetails = async (issues: OrganizationAdminIssue[]) => {
+  const resolvedWithoutTimestamp = issues.filter(
+    (issue) => issue.status === 'resolved' && !issue.resolved_at,
+  );
+
+  if (resolvedWithoutTimestamp.length === 0) return issues;
+
+  const details = await Promise.all(
+    resolvedWithoutTimestamp.map(async (issue) => {
+      try {
+        return await organizationAdminIssueApi.getById(issue.id);
+      } catch {
+        // Keep the list result if an individual detail request is unavailable.
+        return issue;
+      }
+    }),
+  );
+
+  const detailsById = new Map(details.map((issue) => [issue.id, issue]));
+  return issues.map((issue) => detailsById.get(issue.id) ?? issue);
+};
+
 export const useOrganizationAdminIssues = (accountId?: string): UseOrganizationAdminIssuesResult => {
   const queryClient = useQueryClient();
   const queryKey = ['orgAdminIssues', accountId ?? 'unauthenticated'] as const;
@@ -39,7 +61,8 @@ export const useOrganizationAdminIssues = (accountId?: string): UseOrganizationA
     enabled: Boolean(accountId),
     queryFn: async () => {
       const issues = await organizationAdminIssueApi.getAll();
-      return issues.map((issue: OrganizationAdminIssue) => toOrganizationAdminTicket(issue));
+      const hydratedIssues = await hydrateResolvedIssueDetails(issues);
+      return hydratedIssues.map((issue: OrganizationAdminIssue) => toOrganizationAdminTicket(issue));
     },
   });
 
