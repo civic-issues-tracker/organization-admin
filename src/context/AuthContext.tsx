@@ -22,7 +22,6 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (data: { access?: string; refresh?: string; user: User }) => void;
@@ -36,10 +35,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(() => {
     const savedUser = sessionStorage.getItem('user') || localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
-  });
-
-  const [accessToken, setAccessToken] = useState<string | null>(() => {
-    return sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -67,11 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [queryClient]);
 
   const clearAuthStorage = useCallback(() => {
-    sessionStorage.removeItem('accessToken');
-    sessionStorage.removeItem('refreshToken');
     sessionStorage.removeItem('user');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     // Clear persisted and in-memory data to prevent leakage between accounts.
     clearQueryCache();
@@ -86,27 +77,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       activeAccountId.current = data.user.id;
     }
 
-    if (data.access) {
-      setAccessToken(data.access);
-      sessionStorage.setItem('accessToken', data.access);
-      localStorage.setItem('accessToken', data.access);
-    } else {
-      setAccessToken(null);
-      sessionStorage.removeItem('accessToken');
-      localStorage.removeItem('accessToken');
-    }
-
     setUser(data.user);
     sessionStorage.setItem('user', JSON.stringify(data.user));
     localStorage.setItem('user', JSON.stringify(data.user));
-
-    if (data.refresh) {
-      sessionStorage.setItem('refreshToken', data.refresh);
-      localStorage.setItem('refreshToken', data.refresh);
-    } else {
-      sessionStorage.removeItem('refreshToken');
-      localStorage.removeItem('refreshToken');
-    }
 
     // Allow hydration to re-run after a fresh login
     hasHydrated.current = false;
@@ -122,7 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       console.warn('Server logout request failed, clearing local session anyway.');
     } finally {
-      setAccessToken(null);
       setUser(null);
       clearAuthStorage();
 
@@ -133,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [clearAuthStorage]);
 
-  // Hydrate session exactly once on mount — no dependency on user/accessToken
+  // Hydrate session exactly once on mount — no dependency on user
   // to avoid the infinite re-render loop when a 401 clears them.
   useEffect(() => {
     // Only run hydration once per app lifecycle
@@ -141,13 +113,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hasHydrated.current = true;
 
     let isMounted = true;
-
-    // If there is no stored token at all, skip the network call entirely
-    const storedToken = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
-    if (!storedToken) {
-      setTimeout(() => setIsLoading(false), 0);
-      return;
-    }
 
     const hydrateSession = async () => {
       try {
@@ -160,7 +125,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         if (!isMounted) return;
         // Token is invalid/expired — clear everything once, no loop
-        setAccessToken(null);
         setUser(null);
         clearAuthStorage();
         console.warn('Failed to hydrate auth session', error);
@@ -184,9 +148,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let isMounted = true;
 
     const hydrateOrganizationName = async () => {
-      // Guard: don't fire if we have no token (avoids 401 after logout)
-      const storedToken = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
-      if (!storedToken) return;
       if (!user || user.role_name !== 'organization_admin' || user.organization_name || !user.email) {
         return;
       }
@@ -216,10 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useLayoutEffect(() => {
     const requestIntercept = privateApi.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
-        if (token && !config.headers['Authorization']) {
-          config.headers['Authorization'] = `Bearer ${token}`;
-        }
         return config;
       },
       (error) => Promise.reject(error)
@@ -240,24 +197,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           originalRequest._retry = true;
           
           try {
-            const currentRefreshToken = sessionStorage.getItem('refreshToken') || localStorage.getItem('refreshToken');
-            if (currentRefreshToken) {
-              // Note: using authService directly without circular dependency issues because it's imported at the top
-              const result = await authService.refreshToken({ refresh: currentRefreshToken });
-              if (result.access) {
-                // Update state and storage
-                setAccessToken(result.access);
-                if (localStorage.getItem('refreshToken')) {
-                  localStorage.setItem('accessToken', result.access);
-                } else {
-                  sessionStorage.setItem('accessToken', result.access);
-                }
-                
-                // Retry the original request
-                originalRequest.headers['Authorization'] = `Bearer ${result.access}`;
-                return privateApi(originalRequest);
-              }
-            }
+            await authService.refreshToken();
+            return privateApi(originalRequest);
           } catch (refreshError) {
             console.error("Token refresh failed", refreshError);
           }
@@ -278,13 +219,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const contextValue = useMemo(() => ({
     user,
-    accessToken,
     isAuthenticated: !!user,
     isLoading,
     login,
     logout,
     showToast,
-  }), [user, accessToken, isLoading, login, logout, showToast]);
+  }), [user, isLoading, login, logout, showToast]);
 
   return (
     <AuthContext.Provider value={contextValue}>
